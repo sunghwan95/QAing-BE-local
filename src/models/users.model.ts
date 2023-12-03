@@ -9,58 +9,37 @@ const options: SchemaOptions = {
 
 @Schema(options)
 export class User extends Document {
-  @Prop({
-    required: true,
-    unique: true,
-  })
+  @Prop()
   @IsEmail()
   @IsNotEmpty()
   userEmail: string;
 
-  @Prop({
-    required: true,
-  })
+  @Prop()
   @IsString()
   @IsNotEmpty()
   userName: string;
 
-  @Prop({
-    required: true,
-  })
-  @IsString()
+  @Prop()
   @IsNotEmpty()
-  userPhoneNumber: string;
+  userPhoneNumber: string | null;
 
-  @Prop({
-    required: true,
-  })
-  @IsString()
+  @Prop()
   @IsNotEmpty()
-  userPassword: string;
+  userJob: string | null;
 
-  @Prop({
-    required: true,
-  })
-  @IsString()
+  @Prop()
   @IsNotEmpty()
-  userJob: string;
+  userTeamsize: string | null;
 
-  @Prop({
-    required: true,
-  })
-  @IsString()
+  @Prop()
   @IsNotEmpty()
-  userTeamsize: string;
+  userCompany: string | null;
 
-  @Prop({
-    required: true,
-  })
-  @IsString()
-  @IsNotEmpty()
-  userCompany: string;
+  @Prop()
+  accessToken: string | null;
 
-  @Prop({ required: true })
-  accessToken: string;
+  @Prop()
+  refreshToken?: string;
 
   @Prop({ required: false, type: [{ type: Types.ObjectId, ref: 'Video' }] })
   videos: Video[];

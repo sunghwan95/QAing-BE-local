@@ -10,6 +10,15 @@ export class UserService {
     private userModel: Model<User>,
   ) {}
 
+  async create(userData: Partial<User>): Promise<User> {
+    try {
+      const newUser = await this.userModel.create(userData);
+      return newUser;
+    } catch (error) {
+      console.log('유저생성시 에러 발생', error);
+    }
+  }
+
   findAll(): Promise<User[]> {
     return this.userModel.find().exec();
   }
@@ -33,8 +42,9 @@ export class UserService {
 
     if (user) {
       return user;
+    } else {
+      return null;
     }
-    throw new HttpException('존재하지 않는 유저입니다.', HttpStatus.NOT_FOUND);
   }
 
   async getById(id: string): Promise<User> {

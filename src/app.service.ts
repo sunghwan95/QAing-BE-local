@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { UserService } from './users/user.service';
 import { AuthService } from './auth/auth.service';
-import { find } from 'rxjs';
 
 @Injectable()
 export class AppService {
@@ -12,9 +11,9 @@ export class AppService {
 
   async googleLogin(req: any, res: any) {
     const { user } = req;
-    console.log('req user : ', user);
-    let findUser = await this.userService.getByEmail(user.email);
-    console.log(typeof findUser);
+    console.log('리퀘스트 유저 : ', user);
+    console.log('리퀘스트 유저 이메일:', user.userEmail);
+    let findUser = await this.userService.getByEmail(user.userEmail);
 
     if (!findUser) {
       const createdUser = {
@@ -31,6 +30,6 @@ export class AppService {
     }
 
     this.authService.setRefreshToken({ user: findUser, res });
-    return findUser;
+    return res.json(findUser);
   }
 }

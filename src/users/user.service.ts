@@ -2,6 +2,7 @@ import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { User } from '../models/users.model';
+import { NotFoundException } from '@nestjs/common';
 
 @Injectable()
 export class UserService {
@@ -37,13 +38,22 @@ export class UserService {
     await this.userModel.deleteOne({ _id: id }).exec();
   }
 
-  async getByEmail(email: string): Promise<User> {
-    const user = await this.userModel.findOne({ userEmail: email }).exec();
+  async getByEmail(email: string): Promise<User | null> {
+    try {
+      const user = await this.userModel.findOne({ userEmail: email }).exec();
+      console.log('이메일로 찾은 유저 : ', user);
 
-    if (user) {
-      return user;
-    } else {
-      return null;
+      if (user !== null) {
+        return user;
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error('이메일 조회 중 에러 발생', error);
+      throw new HttpException(
+        '이메일 조회 중 에러 발생',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
   }
 

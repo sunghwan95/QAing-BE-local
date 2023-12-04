@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
@@ -11,6 +11,7 @@ import { AuthService } from './auth/auth.service';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './models/users.model';
+import { RootMiddleware } from './middleware/root-middleware';
 
 @Module({
   imports: [
@@ -23,4 +24,8 @@ import { User, UserSchema } from './models/users.model';
   controllers: [AppController, AuthController, UserController],
   providers: [AppService, GoogleStrategy, AuthService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(RootMiddleware).forRoutes('/');
+  }
+}

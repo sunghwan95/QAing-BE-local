@@ -1,7 +1,6 @@
 import { GoogleOAuthGuard } from 'src/guards/google-auth.guard';
 import { Controller, Get, Request, Response, UseGuards } from '@nestjs/common';
 import { AppService } from 'src/app.service';
-import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {

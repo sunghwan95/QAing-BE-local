@@ -7,6 +7,6 @@ export class AppController {
 
   @Get()
   homepage() {
-    console.log('hello world!!');
+    return 'hello world';
   }
 }

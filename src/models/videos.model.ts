@@ -3,7 +3,7 @@ import { Document, Types } from 'mongoose';
 
 @Schema()
 export class Video extends Document {
-  @Prop({ required: true })
+  @Prop()
   originalVideoUrl: string;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'ShortVideo' }] })

@@ -9,7 +9,7 @@ import { User, UserSchema } from '../models/users.model';
   imports: [
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
   ],
-  exports: [UserService], //userService 다른곳에서 사용할수 있도록 exports
+  exports: [UserService],
   controllers: [UserController],
   providers: [UserService],
 })

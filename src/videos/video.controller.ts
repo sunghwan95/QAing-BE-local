@@ -5,21 +5,33 @@ import {
   Delete,
   Param,
   Request,
-  Response,
+  Body,
+  UseInterceptors,
+  UploadedFile,
+  Inject,
 } from '@nestjs/common';
 import { Video } from 'src/models/videos.model';
 import { Model, Types } from 'mongoose';
 import { User } from 'src/models/users.model';
 import { ShortVideo } from 'src/models/shorts.model';
 import { Image } from 'src/models/image.model';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { VideoService } from './video.service';
+import * as express from '@nestjs/platform-express';
+import { Multer } from 'multer';
+import { InjectModel, getModelToken } from '@nestjs/mongoose';
 
 @Controller('videos')
 export class VideoController {
   constructor(
-    private readonly userModel: Model<User>,
+    private readonly videoService: VideoService,
+    @Inject(getModelToken(Video.name))
     private readonly videoModel: Model<Video>,
+    @Inject(getModelToken(User.name)) private readonly userModel: Model<User>,
+    @Inject(getModelToken(ShortVideo.name))
     private readonly shortVideoModel: Model<ShortVideo>,
-    private readonly ImageModel: Model<Image>,
+    @Inject(getModelToken(Image.name))
+    private readonly imageModel: Model<Image>,
   ) {}
 
   @Get()
@@ -249,9 +261,11 @@ export class VideoController {
         return null;
       }
 
-      const images: Image[] = await this.ImageModel.find({
-        _id: { $in: video.images.map((id) => new Types.ObjectId(id)) },
-      }).exec();
+      const images: Image[] = await this.imageModel
+        .find({
+          _id: { $in: video.images.map((id) => new Types.ObjectId(id)) },
+        })
+        .exec();
 
       return images;
     } catch (err) {
@@ -284,10 +298,12 @@ export class VideoController {
         return null;
       }
 
-      const image: Image = await this.ImageModel.findOne({
-        _id: new Types.ObjectId(imageId),
-        _iamge: new Types.ObjectId(imageId),
-      }).exec();
+      const image: Image = await this.imageModel
+        .findOne({
+          _id: new Types.ObjectId(imageId),
+          _iamge: new Types.ObjectId(imageId),
+        })
+        .exec();
 
       if (!image) {
         console.log('해당 이미지를 찾을 수 없음.');
@@ -325,10 +341,12 @@ export class VideoController {
         return { message: '비디오를 찾을 수 없습니다.' };
       }
 
-      const deletedImage = await this.ImageModel.findOneAndDelete({
-        _id: new Types.ObjectId(imageId),
-        video: new Types.ObjectId(videoId),
-      }).exec();
+      const deletedImage = await this.imageModel
+        .findOneAndDelete({
+          _id: new Types.ObjectId(imageId),
+          video: new Types.ObjectId(videoId),
+        })
+        .exec();
 
       if (!deletedImage) {
         console.log('해당 이미지를 찾을 수 없음.');
@@ -340,5 +358,15 @@ export class VideoController {
       console.error('에러 발생', err);
       throw err;
     }
+  }
+
+  @Post('process')
+  @UseInterceptors(FileInterceptor('webmFile')) //blob으로 바꾸기
+  async processVideoAndImages(
+    @UploadedFile() webmFile: Express.Multer.File,
+    // @Body('timestamps') timestamps: number[],
+    @Body('timeRecords') timerecords: number[],
+  ): Promise<{ videoPath: string; imagePaths: string[] }> {
+    return this.videoService.processVideoAndImages(webmFile, timerecords);
   }
 }

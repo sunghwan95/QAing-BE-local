@@ -1,8 +1,10 @@
 import { Injectable } from '@nestjs/common/decorators';
 import { JwtService } from '@nestjs/jwt/dist';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/models/users.model';
 import { Model } from 'mongoose';
+import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {
@@ -10,26 +12,54 @@ export class AuthService {
     private readonly jwtService: JwtService,
     @InjectModel(User.name)
     private userModel: Model<User>,
+    private readonly configService: ConfigService,
   ) {}
 
-  async setRefreshToken({ user, res }) {
-    const refreshToken = this.jwtService.sign(
-      {
-        email: user.userEmail,
-        sub: user.id,
-      },
-      { secret: process.env.REFRESH_TOKEN_SECRET_KEY, expiresIn: '2m' },
-    );
+  async findOrCreate(profile: any): Promise<User> {
+    const userEmail = profile.emails[0].value; // 여기에 사용자의 이메일 또는 다른 식별 정보를 넣어야 합니다.
+    let user = await this.userModel.findOne({ userEmail });
 
-    await this.userModel.findByIdAndUpdate(user.id, { refreshToken });
-
-    // 응답이 이미 보내진 경우 추가적인 헤더를 설정하지 않음
-    if (!res.headersSent) {
-      //https로 변경할 경우 아래 코드로 변경
-      //res.setHeader('Set-Cookie', `refreshToken=${refreshToken}; HttpOnly; Secure; SameSite=Strict`);
-      res.setHeader('Set-Cookie', `refreshToken=${refreshToken}`);
-      return;
+    if (!user) {
+      user = await this.userModel.create({
+        userEmail: userEmail,
+        userName: profile.displayName,
+        userPhoneNumber: null,
+        userJob: null,
+        userTeamsize: null,
+        userCompany: null,
+      });
     }
-    return;
+
+    return user;
+  }
+
+  generateJwtToken(user: User): string {
+    const payload = { sub: user._id, email: user.userEmail }; // JWT에 담을 정보
+    return this.jwtService.sign(payload, {
+      secret: this.configService.get('JWT_SECRET'),
+    });
+  }
+
+  async refreshAccessToken(refreshToken: string): Promise<string> {
+    try {
+      // refreshToken이 유효한지 검증
+      const decoded = jwt.verify(
+        refreshToken,
+        this.configService.get('JWT_SECRET'),
+      ) as any;
+
+      // 이 시점에서 decoded에는 사용자 정보가 담겨 있음
+      // 새로운 accessToken을 생성하고 반환
+      const newAccessToken = jwt.sign(
+        { sub: decoded.sub, email: decoded.email }, // 사용자 정보
+        this.configService.get('JWT_SECRET'),
+        { expiresIn: '15m' }, // accessToken 만료 시간
+      );
+
+      return newAccessToken;
+    } catch (error) {
+      // refreshToken이 유효하지 않은 경우 또는 기타 에러 처리
+      throw new Error('Invalid refreshToken');
+    }
   }
 }

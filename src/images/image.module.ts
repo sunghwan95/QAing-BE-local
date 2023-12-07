@@ -1,11 +1,11 @@
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { VideoController } from './video.controller';
-import { VideoService } from './video.service';
 import { User, UserSchema } from '../models/users.model';
 import { ShortVideo, ShortsVideoSchema } from '../models/shorts.model';
 import { Image, ImageSchema } from '../models/image.model';
 import { ConfigService } from '@nestjs/config';
+import { ImageController } from './image.controller';
+import { ImageService } from './image.service';
 import { AuthMiddleware } from 'src/auth/auth.middleware';
 import { AuthService } from 'src/auth/auth.service';
 import { JwtService } from '@nestjs/jwt';
@@ -18,13 +18,12 @@ import { JwtService } from '@nestjs/jwt';
       { name: Image.name, schema: ImageSchema },
     ]),
   ],
-  controllers: [VideoController],
-  providers: [VideoService, ConfigService, AuthService, JwtService],
-  exports: [VideoService],
+  controllers: [ImageController],
+  providers: [ImageService, ConfigService, AuthService, JwtService],
+  exports: [ImageService],
 })
-// export class VideoModule implements NestModule {
-//   configure(consumer: MiddlewareConsumer) {
-//     consumer.apply(AuthMiddleware).forRoutes('/videos');
-//   }
-// }
-export class VideoModule {}
+export class ImageModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(AuthMiddleware).forRoutes('/images');
+  }
+}

@@ -30,6 +30,7 @@ export class AuthService {
         userTeamsize: null,
         userCompany: null,
         accessToken: profile.accessToken,
+        refreshToken: profile.refreshToken,
       });
     }
     console.log('로그인한 유저 : ', user);
@@ -40,32 +41,18 @@ export class AuthService {
     const payload = { userId: user._id, email: user.userEmail };
     return this.jwtService.sign(payload, {
       secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '2m',
+      expiresIn: '1h',
     });
   }
 
-  // async refreshAccessToken(refreshToken: string): Promise<string> {
-  //   try {
-  //     // refreshToken이 유효한지 검증
-  //     const decoded = jwt.verify(
-  //       refreshToken,
-  //       this.configService.get('JWT_SECRET'),
-  //     ) as any;
+  generateRefreshToken(): string {
+    const refreshToken = jwt.sign({}, this.configService.get('JWT_SECRET'), {
+      expiresIn: '60d',
+    });
 
-  //     // 이 시점에서 decoded에는 사용자 정보가 담겨 있음
-  //     // 새로운 accessToken을 생성하고 반환
-  //     const newAccessToken = jwt.sign(
-  //       { sub: decoded.sub, email: decoded.email }, // 사용자 정보
-  //       this.configService.get('JWT_SECRET'),
-  //       { expiresIn: '2m' }, // accessToken 만료 시간
-  //     );
+    return refreshToken;
+  }
 
-  //     return newAccessToken;
-  //   } catch (error) {
-  //     // refreshToken이 유효하지 않은 경우 또는 기타 에러 처리
-  //     throw new Error('Invalid refreshToken');
-  //   }
-  // }
   async validateUser(token: string): Promise<any> {
     return this.jwtService.verify(token);
   }

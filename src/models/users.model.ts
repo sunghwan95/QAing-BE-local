@@ -1,8 +1,8 @@
+//users.model.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
 import { Document, SchemaOptions, Types } from 'mongoose';
-import { ShortVideo } from './shorts.model';
-import { Image } from './image.model';
+import { Folder } from './folders.model';
 
 const options: SchemaOptions = {
   timestamps: true,
@@ -25,6 +25,9 @@ export class User extends Document {
   userPhoneNumber: string | null;
 
   @Prop()
+  userProfileImg: string | null;
+
+  @Prop()
   @IsNotEmpty()
   userJob: string | null;
 
@@ -36,17 +39,13 @@ export class User extends Document {
   @IsNotEmpty()
   userCompany: string | null;
 
-  @Prop({
-    required: false,
-    type: [{ type: Types.ObjectId, ref: 'ShortVideo' }],
-  })
-  shorts: ShortVideo[];
+  @Prop()
+  accessToken: string | null;
 
   @Prop({
-    required: false,
-    type: [{ type: Types.ObjectId, ref: 'Image' }],
+    type: [{ type: Types.ObjectId, ref: 'Folder' }],
   })
-  images: Image[];
+  folders: Folder[];
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

@@ -14,31 +14,30 @@ import { User, UserSchema } from './models/users.model';
 import { VideoModule } from './videos/video.module';
 import { VideoService } from './videos/video.service';
 import { VideoController } from './videos/video.controller';
-import { ShortVideo, ShortsVideoSchema } from './models/shorts.model';
-import { Image, ImageSchema } from './models/image.model';
+import { IssueFile, IssueFileSchema } from './models/issueFiles.model';
 import { S3StorageModule } from './s3Storage/s3Storage.module';
-import { ImageModule } from './images/image.module';
-import { ImageController } from './images/image.controller';
-import { ImageService } from './images/image.service';
+import { ImageModule } from './folders/folder.module';
 import { AuthModule } from './auth/auth.module';
+import { FoldersController } from './folders/folder.controller';
+import { FolderService } from './folders/folder.service';
+import { Folder, FolderSchema } from './models/folders.model';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
     JwtModule.register({
       secret: process.env.JWT_SECRET, // 여기에 사용할 JWT 비밀 키를 설정
-      signOptions: { expiresIn: '1h' },
+      signOptions: { expiresIn: '2m' },
     }),
     DatabaseModule,
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
-      { name: ShortVideo.name, schema: ShortsVideoSchema },
-      { name: Image.name, schema: ImageSchema },
+      { name: IssueFile.name, schema: IssueFileSchema },
+      { name: Folder.name, schema: FolderSchema },
     ]),
     UserModule,
     VideoModule,
     S3StorageModule,
-    ImageModule,
     AuthModule,
   ],
   controllers: [
@@ -46,14 +45,14 @@ import { AuthModule } from './auth/auth.module';
     AuthController,
     UserController,
     VideoController,
-    ImageController,
+    FoldersController,
   ],
   providers: [
     AppService,
     GoogleStrategy,
     AuthService,
     VideoService,
-    ImageService,
+    FolderService,
     ConfigService,
   ],
 })

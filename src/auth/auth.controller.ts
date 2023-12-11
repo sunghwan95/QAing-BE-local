@@ -1,28 +1,42 @@
-import { Controller, Get, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  HttpStatus,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import { AppService } from 'src/app.service';
 import { AuthGuard } from '@nestjs/passport';
+import { AuthService } from './auth.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly appService: AppService) {}
+  constructor(private authService: AuthService) {}
+
   @Get('google')
   @UseGuards(AuthGuard('google'))
-  async googleLogin() {}
+  googleAuth() {
+    // Google 로그인 페이지로 리디렉션
+  }
 
   @Get('google/callback')
   @UseGuards(AuthGuard('google'))
-  async googleLoginCallback(@Req() req: any, @Res() res: any) {
-    const jwtToken = req.user; // Passport에서 반환한 JWT 토큰
-    //console.log('쿠키 : ', jwtToken);
-    //res.cookie('jwt', jwtToken); // 쿠키에 JWT 토큰 설정
-    //res.setHeader('Authorization', jwtToken);
-    //res.headers("Authorization", jwtToken)
-    //console.log('응답 : ', res);
-    res.redirect(`http://localhost:3000/auth/google/callback?jwt=${jwtToken}`); // 프론트엔드 리디렉션 URL
-  }
+  googleAuthRedirect(@Req() req, @Res() res) {
+    const accessToken = this.authService.generateJwtToken(req.user);
+    const sameSite = req.headers.host.includes('.qaing.co') ? 'None' : '';
 
-  @Get('check')
-  async check(@Req() req: any) {
-    console.log('리퀘스트 : ', req);
+    // 쿠키에 JWT 토큰 설정
+    // httponly: true 떄문에 안되는 것 같음.
+    // credential : true 안먹히는 이유를 찾아야 함.
+    res.cookie('access-token', accessToken, {
+      sameSite,
+      httpOnly: true,
+      secure: true,
+      domain: '.qaing.co',
+    });
+    // 쿠키에 accessToken 저장
+    // 사용자 페이지로 리디렉션
+    res.redirect('https://test.app.qaing.co/auth/google/callback');
   }
 }

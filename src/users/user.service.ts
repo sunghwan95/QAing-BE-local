@@ -1,76 +1,109 @@
-import {
-  Injectable,
-  HttpException,
-  HttpStatus,
-  Req,
-  Res,
-} from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { Model } from 'mongoose';
-import { User } from '../models/users.model';
+import { InjectModel } from '@nestjs/mongoose';
+import { User } from 'src/models/users.model';
+import { UpdateUserDto } from 'src/dto/updateUser.dto';
+import { Folder } from 'src/models/folders.model';
+import { UpdateFolderDto } from 'src/dto/updateFolder.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class UserService {
   constructor(
-    @InjectModel(User.name)
-    private userModel: Model<User>,
+    @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectModel(Folder.name) private readonly folderModel: Model<Folder>,
+    private readonly jwtService: JwtService,
   ) {}
 
-  async create(userData: Partial<User>): Promise<User> {
-    try {
-      const newUser = await this.userModel.create(userData);
-      return newUser;
-    } catch (error) {
-      console.log('유저생성시 에러 발생', error);
+  async updatePreInfo(
+    userId: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<User> {
+    const existingUser = await this.userModel.findById(userId);
+
+    if (!existingUser) {
+      throw new NotFoundException('User not found');
     }
+
+    // 업데이트된 필드값을 적용합니다.
+    Object.assign(existingUser, updateUserDto);
+
+    // 업데이트된 사용자를 저장하고 반환합니다.
+    return existingUser.save();
   }
 
-  findAll(): Promise<User[]> {
-    return this.userModel.find().exec();
-  }
+  async getUserInfo(userId: string): Promise<User> {
+    const user = await this.userModel.findById(userId);
 
-  findOne(id: string): Promise<User | null> {
-    try {
-      const findUser = this.userModel.findOne({ _id: id }).exec();
-      return findUser;
-    } catch (err) {
-      console.log('해당 유저가 존재하지 않음.', err);
-      return;
+    if (!user) {
+      throw new NotFoundException('User not found');
     }
+
+    return user;
   }
 
-  async remove(id: string): Promise<void> {
-    await this.userModel.deleteOne({ _id: id }).exec();
-  }
+  async getAllUserFolders(userId: string): Promise<Folder[]> {
+    const user = await this.userModel.findById(userId);
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
 
-  async getByEmail(email: string): Promise<User | null> {
-    try {
-      const user = await this.userModel.findOne({ userEmail: email }).exec();
-      console.log('이메일로 찾은 유저 : ', user);
+    const foldersWithContents: Folder[] = [];
 
-      if (user !== null) {
-        return user;
-      } else {
-        return null;
+    for (const folderId of user.folders) {
+      const folder = await this.folderModel
+        .findById(folderId)
+        .populate('issues');
+      if (folder) {
+        foldersWithContents.unshift(folder);
       }
-    } catch (error) {
-      console.error('이메일 조회 중 에러 발생', error);
-      throw new HttpException(
-        '이메일 조회 중 에러 발생',
-        HttpStatus.INTERNAL_SERVER_ERROR,
-      );
     }
+
+    console.log('유저 : ', user);
+
+    return foldersWithContents;
   }
 
-  async getById(id: string): Promise<User> {
-    const user = await this.userModel.findOne({ _id: id }).exec();
-    if (user) {
-      return user;
+  async updateUserProfile(
+    userId: string,
+    updateUserDto: UpdateUserDto,
+  ): Promise<User> {
+    const existingUser = await this.userModel.findById(userId);
+
+    if (!existingUser) {
+      throw new NotFoundException('User not found');
     }
 
-    throw new HttpException(
-      '해당 ID가 존재하지 않습니다.',
-      HttpStatus.NOT_FOUND,
-    );
+    // 업데이트된 필드값을 적용합니다.
+    Object.assign(existingUser, updateUserDto);
+
+    // 업데이트된 사용자를 저장하고 반환합니다.
+    return await existingUser.save();
+  }
+
+  async updateFolderName(
+    userId: string,
+    folderId: string,
+    updateFolderDto: UpdateFolderDto,
+  ): Promise<Folder> {
+    const existingFolder = await this.folderModel.findById(folderId);
+
+    if (!existingFolder) {
+      throw new NotFoundException('Folder not found');
+    }
+
+    // 폴더 이름을 업데이트합니다.
+    existingFolder.folderName = updateFolderDto.newFolderName;
+
+    // 업데이트된 폴더를 저장하고 반환합니다.
+    return existingFolder.save();
+  }
+
+  async deleteFolder(userId: string, folderId: string): Promise<void> {
+    const result = await this.folderModel.deleteOne({ _id: folderId });
+
+    if (result.deletedCount === 0) {
+      throw new NotFoundException('Folder not found');
+    }
   }
 }

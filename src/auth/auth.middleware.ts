@@ -15,7 +15,7 @@ export class AuthMiddleware implements NestMiddleware {
     const refreshToken = req.cookies['refresh-token'];
 
     if (!accessToken) {
-      return res.redirect('https://test.app.qaing.co/auth/signup');
+      return res.redirect('https://app.qaing.co/auth/signup');
     }
 
     try {
@@ -33,7 +33,7 @@ export class AuthMiddleware implements NestMiddleware {
 
       // refreshToken이 만료 기간이 지났다면, 로그인 페이지로 리디렉션
       if (refreshTokenDecoded.exp <= Math.floor(Date.now() / 1000)) {
-        return res.redirect('https://test.app.qaing.co/auth/signup');
+        return res.redirect('https://app.qaing.co/auth/signup');
       }
 
       // accessToken의 만료 기간이 지났다면, 새로운 accessToken 발급

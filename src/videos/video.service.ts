@@ -17,6 +17,7 @@ const execAsync = promisify(exec);
 @Injectable()
 export class VideoService {
   private s3Client: S3Client;
+  private folderUpdateSubscribers: Map<string, Function[]> = new Map();
 
   constructor(
     @InjectModel(IssueFile.name)
@@ -126,6 +127,7 @@ export class VideoService {
 
       if (folder.issues.length == timestamps.length) {
         folder.status = true;
+        this.notifyFolderUpdate(folderId, folder);
       } else {
         throw new Error('이유 생성 중 에러 발생.');
       }
@@ -152,6 +154,20 @@ export class VideoService {
     } catch (error) {
       console.error('임시 파일 쓰기 에러:', error);
       throw error;
+    }
+  }
+
+  subscribeToFolderUpdates(folderId: string, callback: Function) {
+    if (!this.folderUpdateSubscribers.has(folderId)) {
+      this.folderUpdateSubscribers.set(folderId, []);
+    }
+    this.folderUpdateSubscribers.get(folderId).push(callback);
+  }
+
+  private notifyFolderUpdate(folderId: string, folder: Folder) {
+    const subscribers = this.folderUpdateSubscribers.get(folderId);
+    if (subscribers) {
+      subscribers.forEach((callback) => callback(folder));
     }
   }
 

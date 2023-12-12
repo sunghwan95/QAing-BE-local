@@ -19,10 +19,9 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { VideoService } from './video.service';
 import * as express from '@nestjs/platform-express';
 import { Multer } from 'multer';
-import { InjectModel, getModelToken } from '@nestjs/mongoose';
-import { parse } from 'path';
-import { AuthMiddleware } from 'src/auth/auth.middleware';
+import { getModelToken } from '@nestjs/mongoose';
 import { Folder } from 'src/models/folders.model';
+import { Response } from 'express';
 
 @Controller('videos')
 export class VideoController {
@@ -60,5 +59,21 @@ export class VideoController {
       folderId,
     );
     return res.json({ message: 'success' });
+  }
+
+  @Get('subscribe/:folderId')
+  async subscribeToFolderUpdates(
+    @Param('folderId') folderId: string,
+    @Res() res: Response,
+  ) {
+    res.set({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    });
+
+    this.videoService.subscribeToFolderUpdates(folderId, (folder: Folder) => {
+      res.write(`data: ${JSON.stringify({ message: 'success' })}\n\n`);
+    });
   }
 }

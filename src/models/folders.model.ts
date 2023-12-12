@@ -13,6 +13,9 @@ export class Folder extends Document {
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'IssueFile' }] })
   issues: IssueFile[];
+
+  @Prop()
+  status: boolean;
 }
 
 export const FolderSchema = SchemaFactory.createForClass(Folder);

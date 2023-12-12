@@ -30,6 +30,7 @@ export class FolderService {
   async getIssuesFromFolder(folderId: string) {
     const folder = await this.folderModel.findById(folderId);
     if (!folder) {
+      console.error(`Folder not found for id: ${folderId}`);
       throw new NotFoundException('Folder not found');
     }
 

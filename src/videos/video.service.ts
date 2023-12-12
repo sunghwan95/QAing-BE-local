@@ -17,6 +17,7 @@ const execAsync = promisify(exec);
 @Injectable()
 export class VideoService {
   private s3Client: S3Client;
+  private folderUpdateSubscribers: Map<string, Function[]> = new Map();
 
   constructor(
     @InjectModel(IssueFile.name)
@@ -36,11 +37,43 @@ export class VideoService {
     });
   }
 
+  async getFolderIdByUser(userId: string) {
+    try {
+      const user = await this.userModel.findById(userId);
+
+      if (!user) {
+        throw new Error('User not found');
+      }
+
+      const nowDate = new Date();
+      const folder = new this.folderModel({
+        folderName: `${nowDate.getFullYear()}-${
+          nowDate.getMonth() + 1
+        }-${nowDate.getDate()} ${
+          nowDate.getHours() + 9
+        }:${nowDate.getMinutes()}`,
+        issues: [],
+        status: false,
+      });
+
+      await folder.save();
+
+      user.folders.push(folder._id);
+      await user.save();
+
+      return folder;
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      throw error;
+    }
+  }
+
   async processVideoAndImages(
     webmFile: Express.Multer.File,
     timestamps: number[],
     userId: string,
-  ): Promise<{ videoUrls: string[]; imageUrls: string[] }> {
+    folderId: string,
+  ) {
     const videoUrls: string[] = [];
     const imageUrls: string[] = [];
 
@@ -56,17 +89,7 @@ export class VideoService {
 
     try {
       const user = await this.userModel.findById(userId);
-
-      const nowDate = new Date();
-
-      const folder = new this.folderModel({
-        folderName: `${nowDate.getFullYear()}-${
-          nowDate.getMonth() + 1
-        }-${nowDate.getDate()} ${
-          nowDate.getHours() + 9
-        }:${nowDate.getMinutes()}`,
-        issues: [],
-      });
+      const folder = await this.folderModel.findById(folderId);
 
       let issueNum: number;
       issueNum = 1;
@@ -79,22 +102,16 @@ export class VideoService {
           __dirname,
           `video_${timestampNow}_${timestamp}.mp4`,
         );
-
-        console.log('이미지 생성 시작');
         const imageUrl = await this.processImage(
           tempWebmFilePath,
           timestamp,
           imagePath,
         );
-        console.log('이미지 생성 완료');
-
-        console.log('비디오 생성 시작');
         const videoUrl = await this.processVideo(
           tempWebmFilePath,
           timestamp,
           videoPath,
         );
-        console.log('비디오 생성 완료');
 
         imageUrls.push(imageUrl);
         videoUrls.push(videoUrl);
@@ -108,18 +125,24 @@ export class VideoService {
         folder.issues.push(createdIssueFile._id);
       }
 
+      if (folder.issues.length == timestamps.length) {
+        folder.status = true;
+        this.notifyFolderUpdate(folderId, folder);
+      } else {
+        throw new Error('이유 생성 중 에러 발생.');
+      }
+
       await folder.save();
       user.folders.push(folder._id);
       await user.save();
-      console.log('이미지 및 비디오 생성 완료');
+      console.log('이미지 및 비디오 생성 완료!');
+      return;
     } catch (err) {
       console.log('비디오 생성 중 에러 발생 : ', err);
       return;
     } finally {
       await this.deleteFile(tempWebmFilePath);
     }
-
-    return { videoUrls, imageUrls };
   }
 
   private async writeTemporaryFile(
@@ -131,6 +154,20 @@ export class VideoService {
     } catch (error) {
       console.error('임시 파일 쓰기 에러:', error);
       throw error;
+    }
+  }
+
+  subscribeToFolderUpdates(folderId: string, callback: Function) {
+    if (!this.folderUpdateSubscribers.has(folderId)) {
+      this.folderUpdateSubscribers.set(folderId, []);
+    }
+    this.folderUpdateSubscribers.get(folderId).push(callback);
+  }
+
+  private notifyFolderUpdate(folderId: string, folder: Folder) {
+    const subscribers = this.folderUpdateSubscribers.get(folderId);
+    if (subscribers) {
+      subscribers.forEach((callback) => callback(folder));
     }
   }
 

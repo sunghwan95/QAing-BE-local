@@ -37,6 +37,6 @@ export class AuthController {
     });
     // 쿠키에 accessToken 저장
     // 사용자 페이지로 리디렉션
-    res.redirect('https://test.app.qaing.co/auth/google/callback');
+    res.redirect('https://app.qaing.co/auth/google/callback');
   }
 }

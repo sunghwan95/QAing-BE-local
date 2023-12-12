@@ -17,7 +17,7 @@ import { Folder, FolderSchema } from 'src/models/folders.model';
   imports: [
     JwtModule.register({
       secret: process.env.JWT_SECRET, // 여기에 사용할 JWT 비밀 키를 설정
-      signOptions: { expiresIn: '2m' }, // 선택적으로 만료 시간을 설정
+      signOptions: { expiresIn: '1h' }, // 선택적으로 만료 시간을 설정
     }),
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },

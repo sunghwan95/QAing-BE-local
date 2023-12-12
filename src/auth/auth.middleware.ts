@@ -14,7 +14,7 @@ export class AuthMiddleware implements NestMiddleware {
     const token = req.cookies['access-token']; // 쿠키에서 JWT 토큰 추출
     console.log('토큰 : ', token);
     if (!token) {
-      return res.redirect('https://test.app.qaing.co/auth/signup');
+      return res.redirect('https://app.qaing.co/auth/signup');
     }
 
     try {

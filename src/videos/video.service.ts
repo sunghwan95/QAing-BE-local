@@ -133,7 +133,7 @@ export class VideoService {
       await folder.save();
       user.folders.push(folder._id);
       await user.save();
-      console.log(`이미지 ${issueNum}개 및 비디오 ${issueNum}개 생성 완료`);
+      console.log('이미지 및 비디오 생성 완료!');
       return;
     } catch (err) {
       console.log('비디오 생성 중 에러 발생 : ', err);

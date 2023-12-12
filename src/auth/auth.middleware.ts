@@ -39,11 +39,11 @@ export class AuthMiddleware implements NestMiddleware {
       // accessToken의 만료 기간이 지났다면, 새로운 accessToken 발급
       if (accessTokenDecoded.exp <= Math.floor(Date.now() / 1000)) {
         const sameSite = req.headers.host.includes('.qaing.co') ? true : false;
-
+        console.log('디코딩된 토큰 : ', refreshTokenDecoded);
         const newAccessToken = this.jwtService.sign(
           {
             userId: refreshTokenDecoded.userId,
-            email: refreshTokenDecoded.email,
+            email: refreshTokenDecoded.userEmail,
           },
           {
             secret: this.configService.get<string>('JWT_SECRET'),

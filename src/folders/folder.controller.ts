@@ -13,6 +13,7 @@ import {
 import { FolderService } from './folder.service';
 import { UpdateIssueFileDto } from 'src/dto/updateIssueFile.dto';
 import { AuthMiddleware } from 'src/auth/auth.middleware';
+import { Types } from 'mongoose';
 
 @Controller('folders')
 @UseGuards(AuthMiddleware)
@@ -22,6 +23,12 @@ export class FoldersController {
   @Get(':folderId/issues')
   async getFolderWithIssueFiles(@Param('folderId') folderId: string) {
     try {
+      const isValidObjectId = Types.ObjectId.isValid(folderId);
+
+      if (!isValidObjectId) {
+        throw new Error('Invalid folderId');
+      }
+
       const issues = await this.foldersService.getIssuesFromFolder(folderId);
       return issues;
     } catch (error) {

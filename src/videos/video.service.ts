@@ -118,8 +118,8 @@ export class VideoService {
         videoUrls.push(videoUrl);
 
         const createdIssueFile = await this.saveMediaUrlsToMongoDB(
-          imageUrl,
-          videoUrl,
+          `https://static.qaing.co/image_${timestampNow}_${timestamp}.jpg`,
+          `https://static.qaing.co/video_${timestampNow}_${timestamp}.mp4`,
           issueNum,
         );
         issueNum += 1;

@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/models/users.model';
 import { Model } from 'mongoose';
+import axios from 'axios';
 import * as jwt from 'jsonwebtoken';
 
 @Injectable()
@@ -32,7 +33,10 @@ export class AuthService {
         accessToken: profile.accessToken,
         refreshToken: profile.refreshToken,
       });
+    } else {
+      user.refreshToken = profile.refreshToken;
     }
+    await user.save();
     console.log('로그인한 유저 : ', user);
     return user;
   }
@@ -45,22 +49,13 @@ export class AuthService {
     });
   }
 
-  generateRefreshToken(): string {
-    const refreshToken = jwt.sign({}, this.configService.get('JWT_SECRET'), {
-      expiresIn: '60d',
+  async getNewAccessToken(refreshToken: string): Promise<string> {
+    const response = await axios.post('https://oauth2.googleapis.com/token', {
+      client_id: process.env.GOOGLE_CLIENT_ID,
+      client_secret: process.env.GOOGLE_CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
     });
-
-    return refreshToken;
-  }
-
-  async validateUser(token: string): Promise<any> {
-    return this.jwtService.verify(token);
-  }
-
-  async login(user: any) {
-    const payload = { email: user.email, sub: user.userId };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+    return response.data.access_token;
   }
 }

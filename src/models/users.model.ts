@@ -42,6 +42,9 @@ export class User extends Document {
   @Prop()
   accessToken: string | null;
 
+  @Prop()
+  refreshToken: string | null;
+
   @Prop({
     type: [{ type: Types.ObjectId, ref: 'Folder' }],
   })

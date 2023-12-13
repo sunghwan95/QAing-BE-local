@@ -12,7 +12,7 @@ async function bootstrap() {
   app.use(cookieParser());
 
   await app.listen(8080, () =>
-    console.log('Master : Nest.JS Server started on 8080'),
+    console.log('Dev : Nest.JS Server started on 8080'),
   );
 }
 bootstrap();

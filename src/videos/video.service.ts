@@ -14,6 +14,7 @@ import { User } from 'src/models/users.model';
 
 const execAsync = promisify(exec);
 
+//테스트 커밋
 @Injectable()
 export class VideoService {
   private s3Client: S3Client;

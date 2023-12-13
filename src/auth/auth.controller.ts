@@ -40,8 +40,6 @@ export class AuthController {
       const sameSite = req.headers.host.includes('.qaing.co') ? 'None' : '';
 
       // 쿠키에 JWT 토큰 설정
-      // httponly: true 떄문에 안되는 것 같음.
-      // credential : true 안먹히는 이유를 찾아야 함.
       res.cookie('refresh-token', refreshToken, {
         sameSite,
         httpOnly: true,

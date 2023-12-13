@@ -11,6 +11,8 @@ async function bootstrap() {
   });
   app.use(cookieParser());
 
-  await app.listen(8080, () => console.log('Nest.JS Server started on 8080'));
+  await app.listen(8080, () =>
+    console.log('Master : Nest.JS Server started on 8080'),
+  );
 }
 bootstrap();

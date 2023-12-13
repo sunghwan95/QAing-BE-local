@@ -41,24 +41,18 @@ export class AuthController {
       const accessToken = this.authService.generateJwtToken(user);
       const refreshToken = user.refreshToken; // Google로부터 받은 refreshToken 사용
       console.log('리퀘스트 헤더 : ', req.headers.host);
-      const sameSite = req.headers.host.includes('.qaing.co') ? 'None' : '';
+      const sameSite = req.headers.host.includes('localhost') ? 'None' : '';
 
       // 쿠키에 토큰 설정
       res.cookie('refresh-token', refreshToken, {
-        sameSite,
-        httpOnly: true,
-        secure: true,
-        domain: '.qaing.co',
+        domain: 'localhost',
       });
 
       res.cookie('access-token', accessToken, {
-        sameSite,
-        httpOnly: true,
-        secure: true,
-        domain: '.qaing.co',
+        domain: 'localhost',
       });
 
-      res.redirect('https://test.app.qaing.co/auth/google/callback');
+      res.redirect('http://localhost:3000/auth/google/callback');
     } catch (err) {
       console.error('Google authentication failed:', err);
       res
@@ -70,7 +64,7 @@ export class AuthController {
   @Get('refresh')
   async refreshAccessToken(@Req() req, @Res() res) {
     try {
-      const sameSite = req.headers.host.includes('.qaing.co') ? 'None' : '';
+      const sameSite = req.headers.host.includes('localhost') ? 'None' : '';
       const refreshToken = req.cookies['refresh-token'];
       if (!refreshToken) {
         throw new Error('Refresh token not provided');
@@ -91,10 +85,7 @@ export class AuthController {
       const accessToken = this.authService.generateJwtToken(user);
 
       res.cookie('access-token', accessToken, {
-        sameSite,
-        httpOnly: true,
-        secure: true,
-        domain: '.qaing.co',
+        domain: 'localhost',
       });
 
       res.status(HttpStatus.OK).json({ success: true, accessToken });

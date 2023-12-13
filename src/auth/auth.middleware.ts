@@ -15,10 +15,10 @@ export class AuthMiddleware implements NestMiddleware {
   async use(req: Request, res: Response, next: NextFunction) {
     const accessToken = req.cookies['access-token'];
     const refreshToken = req.cookies['refresh-token'];
-    const sameSite = req.headers.host.includes('.qaing.co') ? 'none' : 'lax';
+    const sameSite = req.headers.host.includes('localhost') ? 'none' : 'lax';
 
     if (!accessToken && !refreshToken) {
-      return res.redirect('https://test.app.qaing.co/auth/signup');
+      return res.redirect('http://localhost:3000/auth/signup');
     }
 
     try {
@@ -35,19 +35,16 @@ export class AuthMiddleware implements NestMiddleware {
           const newAccessToken =
             await this.authService.getNewAccessToken(refreshToken);
           res.cookie('access-token', newAccessToken, {
-            httpOnly: true,
-            secure: true,
-            domain: '.qaing.co',
-            sameSite,
+            domain: 'localhost',
           });
           req.user = this.jwtService.decode(newAccessToken);
         } catch (innerError) {
           console.error('Failed to refresh access token:', innerError);
-          return res.redirect('https://test.app.qaing.co/auth/signup');
+          return res.redirect('http://localhost:3000/auth/signup');
         }
       } else {
         // 두 토큰 모두 무효
-        return res.redirect('https://test.app.qaing.co/auth/signup');
+        return res.redirect('http://localhost:3000/auth/signup');
       }
     }
 

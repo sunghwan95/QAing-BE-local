@@ -11,9 +11,14 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: 'https://test.qaing.co/auth/google/callback',
       scope: ['email', 'profile'],
-      accessType: 'offline',
-      prompt: 'consent', // 실제 운영에서는 최초 로그인시에만 refresh-token을 발급해주기 위해 주석 처리 할 것.
     });
+  }
+
+  authorizationParams(): { [key: string]: string } {
+    return {
+      access_type: 'offline',
+      prompt: 'consent',
+    };
   }
 
   async validate(
@@ -31,6 +36,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
       accessToken,
       refreshToken,
     };
+    console.log('리프레시 토큰 : ', user.refreshToken);
     const userInDB = await this.authService.findOrCreate(user);
     done(null, userInDB);
   }

@@ -13,7 +13,6 @@ import { promisify } from 'util';
 import { User } from 'src/models/users.model';
 
 const execAsync = promisify(exec);
-
 //테스트 커밋
 @Injectable()
 export class VideoService {
@@ -78,8 +77,7 @@ export class VideoService {
     const videoUrls: string[] = [];
     const imageUrls: string[] = [];
 
-    const timestampNow = Date.now();
-    const tempWebmFilePath = path.join(__dirname, `${timestampNow}_temp.webm`);
+    const tempWebmFilePath = path.join(__dirname, `${folderId}_temp.webm`);
 
     await this.writeTemporaryFile(webmFile.buffer, tempWebmFilePath);
 
@@ -97,29 +95,33 @@ export class VideoService {
       for (const timestamp of timestamps) {
         const imagePath = path.join(
           __dirname,
-          `image_${timestampNow}_${timestamp}.jpg`,
+          `image_${folderId}_${issueNum}.jpg`,
         );
         const videoPath = path.join(
           __dirname,
-          `video_${timestampNow}_${timestamp}.mp4`,
+          `video_${folderId}_${issueNum}.mp4`,
         );
         const imageUrl = await this.processImage(
           tempWebmFilePath,
           timestamp,
           imagePath,
+          folderId,
+          issueNum,
         );
         const videoUrl = await this.processVideo(
           tempWebmFilePath,
           timestamp,
           videoPath,
+          folderId,
+          issueNum,
         );
 
         imageUrls.push(imageUrl);
         videoUrls.push(videoUrl);
 
         const createdIssueFile = await this.saveMediaUrlsToMongoDB(
-          `https://static.qaing.co/image_${timestampNow}_${timestamp}.jpg`,
-          `https://static.qaing.co/video_${timestampNow}_${timestamp}.mp4`,
+          `https://static.qaing.co/image_${folderId}_${issueNum}.jpg`,
+          `https://static.qaing.co/video_${folderId}_${issueNum}.mp4`,
           issueNum,
         );
         issueNum += 1;
@@ -134,7 +136,6 @@ export class VideoService {
       }
 
       await folder.save();
-      user.folders.push(folder._id);
       await user.save();
       console.log('이미지 및 비디오 생성 완료!');
       return;
@@ -176,12 +177,14 @@ export class VideoService {
     webmFilePath: string,
     timestamp: number,
     outputPath: string,
+    folderId: string,
+    issueNum: number,
   ): Promise<string> {
     const command = `ffmpeg -ss ${timestamp} -i ${webmFilePath} -vframes 1 -q:v 2 ${outputPath}`;
     try {
       await execAsync(command);
 
-      return this.uploadToS3(outputPath, 'image');
+      return this.uploadToS3(outputPath, 'image', folderId, issueNum);
     } catch (error) {
       console.error('이미지 생성 중 오류 발생:', error);
       throw error;
@@ -192,6 +195,8 @@ export class VideoService {
     webmFilePath: string,
     timestamp: number,
     outputPath: string,
+    folderId: string,
+    issueNum: number,
   ): Promise<string> {
     const editStartTime = Math.max(0, timestamp - 10);
     const duration = 20;
@@ -205,7 +210,7 @@ export class VideoService {
         duration,
       );
       console.log('mp4 변환 완료');
-      return this.uploadToS3(outputPath, 'video');
+      return this.uploadToS3(outputPath, 'video', folderId, issueNum);
     } catch (error) {
       console.error('비디오 생성 중 오류 발생:', error);
       throw error;
@@ -238,8 +243,10 @@ export class VideoService {
   private async uploadToS3(
     filePath: string,
     fileType: 'image' | 'video',
+    folderId: string,
+    issueNum: number,
   ): Promise<string> {
-    const key = `${fileType}_${Date.now()}.${
+    const key = `${fileType}_${folderId}_${issueNum}.${
       fileType === 'image' ? 'jpg' : 'mp4'
     }`;
     const fileStream = fs.createReadStream(filePath);

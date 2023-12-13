@@ -15,33 +15,40 @@ export class AuthMiddleware implements NestMiddleware {
   async use(req: Request, res: Response, next: NextFunction) {
     const accessToken = req.cookies['access-token'];
     const refreshToken = req.cookies['refresh-token'];
+    const sameSite = req.headers.host.includes('.qaing.co') ? 'none' : 'lax';
 
-    if (!accessToken) {
-      return res.redirect('https://app.qaing.co/auth/signup');
+    if (!accessToken && !refreshToken) {
+      return res.redirect('https://test.app.qaing.co/auth/signup');
     }
 
     try {
-      const accessTokenDecoded = this.jwtService.verify(accessToken, {
-        secret: this.configService.get<string>('JWT_SECRET'),
-      });
-
-      req.user = accessTokenDecoded;
-
-      if (
-        accessTokenDecoded.exp <= Math.floor(Date.now() / 1000) &&
-        refreshToken
-      ) {
-        const newAccessToken =
-          await this.authService.getNewAccessToken(refreshToken);
-        res.cookie('access-token', newAccessToken, {
-          httpOnly: true,
-          secure: true,
-          domain: '.qaing.co',
+      if (accessToken) {
+        this.jwtService.verify(accessToken, {
+          secret: this.configService.get<string>('JWT_SECRET'),
         });
+        req.user = this.jwtService.decode(accessToken);
       }
     } catch (error) {
-      console.error(error);
-      return res.redirect('https://app.qaing.co/auth/signup');
+      if (error.name === 'TokenExpiredError' && refreshToken) {
+        // accessToken 만료 및 refreshToken 유효
+        try {
+          const newAccessToken =
+            await this.authService.getNewAccessToken(refreshToken);
+          res.cookie('access-token', newAccessToken, {
+            httpOnly: true,
+            secure: true,
+            domain: '.qaing.co',
+            sameSite,
+          });
+          req.user = this.jwtService.decode(newAccessToken);
+        } catch (innerError) {
+          console.error('Failed to refresh access token:', innerError);
+          return res.redirect('https://test.app.qaing.co/auth/signup');
+        }
+      } else {
+        // 두 토큰 모두 무효
+        return res.redirect('https://test.app.qaing.co/auth/signup');
+      }
     }
 
     next();

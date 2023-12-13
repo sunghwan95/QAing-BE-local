@@ -35,11 +35,15 @@ export class AuthController {
   @UseGuards(AuthGuard('google'))
   googleAuthRedirect(@Req() req, @Res() res) {
     try {
-      const accessToken = this.authService.generateJwtToken(req.user);
-      const refreshToken = this.authService.generateRefreshToken();
+      const user = req.user as User;
+
+      // `accessToken`은 생성하지만, `refreshToken`은 Google로부터 받은 것을 사용
+      const accessToken = this.authService.generateJwtToken(user);
+      const refreshToken = user.refreshToken; // Google로부터 받은 refreshToken 사용
+      console.log('리퀘스트 헤더 : ', req.headers.host);
       const sameSite = req.headers.host.includes('.qaing.co') ? 'None' : '';
 
-      // 쿠키에 JWT 토큰 설정
+      // 쿠키에 토큰 설정
       res.cookie('refresh-token', refreshToken, {
         sameSite,
         httpOnly: true,
@@ -53,9 +57,8 @@ export class AuthController {
         secure: true,
         domain: '.qaing.co',
       });
-      // 쿠키에 accessToken 저장
-      // 사용자 페이지로 리디렉션
-      res.redirect('https://app.qaing.co/auth/google/callback');
+
+      res.redirect('https://test.app.qaing.co/auth/google/callback');
     } catch (err) {
       console.error('Google authentication failed:', err);
       res

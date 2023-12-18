@@ -18,15 +18,14 @@ export class AuthService {
   ) {}
 
   async findOrCreate(profile: any): Promise<User> {
+    console.log('프로필 : ', profile);
     const userEmail = profile.userEmail; // 여기에 사용자의 이메일 또는 다른 식별 정보를 넣어야 합니다.
     let user = await this.userModel.findOne({ userEmail });
-    console.log('프로필 리프레시 토큰 : ', profile.refreshToken);
-
     if (!user) {
       user = await this.userModel.create({
         userEmail: userEmail,
         userName: profile.userName,
-        userProfile: profile.userProfile,
+        userProfileImg: profile.userProfile,
         userPhoneNumber: null,
         userJob: null,
         userTeamsize: null,
@@ -42,13 +41,13 @@ export class AuthService {
     return user;
   }
 
-  generateJwtToken(user: User): string {
-    const payload = { userId: user._id, email: user.userEmail };
-    return this.jwtService.sign(payload, {
-      secret: this.configService.get<string>('JWT_SECRET'),
-      expiresIn: '1h',
-    });
-  }
+  // generateJwtToken(user: User): string {
+  //   const payload = { userId: user._id, email: user.userEmail };
+  //   return this.jwtService.sign(payload, {
+  //     secret: this.configService.get<string>('JWT_SECRET'),
+  //     expiresIn: '1h',
+  //   });
+  // }
 
   async getNewAccessToken(refreshToken: string): Promise<string> {
     try {
@@ -60,8 +59,23 @@ export class AuthService {
       });
       return response.data.access_token;
     } catch (error) {
-      console.error('Error refreshing access token:', error);
       throw new Error('Failed to refresh access token');
+    }
+  }
+
+  async getGoogleUserProfile(accessToken: string) {
+    try {
+      const response = await axios.get(
+        'https://www.googleapis.com/oauth2/v2/userinfo',
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        },
+      );
+      return response.data; // 여기서 반환된 사용자 정보
+    } catch (error) {
+      throw new Error('Failed to retrieve Google user profile');
     }
   }
 }

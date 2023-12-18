@@ -9,7 +9,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     super({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: 'http://localhost:8080/auth/google/callback',
+      callbackURL: process.env.GOOGLE_REDIRECT_URI,
       scope: ['email', 'profile'],
     });
   }
@@ -27,17 +27,20 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     profile,
     done: VerifyCallback,
   ): Promise<any> {
-    const { emails, displayName, photos } = profile;
-    console.log('프로필 : ', profile);
-    const user = {
-      userEmail: emails[0].value,
-      userName: displayName,
-      userProfile: photos[0].value,
-      accessToken,
-      refreshToken,
-    };
-    console.log('리프레시 토큰 : ', user.refreshToken);
-    const userInDB = await this.authService.findOrCreate(user);
-    done(null, userInDB);
+    try {
+      const { emails, displayName, photos } = profile;
+      const user = {
+        userEmail: emails[0].value,
+        userName: displayName,
+        userProfile: photos[0].value,
+        accessToken,
+        refreshToken,
+      };
+      const userInDB = await this.authService.findOrCreate(user);
+      done(null, userInDB);
+    } catch (error) {
+      console.error('Error during Google authentication:', error);
+      return done(error, false);
+    }
   }
 }

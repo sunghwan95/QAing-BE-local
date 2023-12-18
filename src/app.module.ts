@@ -16,11 +16,11 @@ import { VideoService } from './videos/video.service';
 import { VideoController } from './videos/video.controller';
 import { IssueFile, IssueFileSchema } from './models/issueFiles.model';
 import { S3StorageModule } from './s3Storage/s3Storage.module';
-import { ImageModule } from './folders/folder.module';
 import { AuthModule } from './auth/auth.module';
 import { FoldersController } from './folders/folder.controller';
 import { FolderService } from './folders/folder.service';
 import { Folder, FolderSchema } from './models/folders.model';
+import { PreSingedModule } from './preSignedUrl/preSigned.module';
 
 @Module({
   imports: [
@@ -39,6 +39,7 @@ import { Folder, FolderSchema } from './models/folders.model';
     VideoModule,
     S3StorageModule,
     AuthModule,
+    PreSingedModule,
   ],
   controllers: [
     AppController,

@@ -3,7 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { IssueFile } from 'src/models/issueFiles.model';
 import { Folder } from 'src/models/folders.model';
-import * as ffmpeg from 'fluent-ffmpeg';
 import * as fs from 'fs';
 import * as path from 'path';
 import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
@@ -11,6 +10,7 @@ import { ConfigService } from '@nestjs/config';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import { User } from 'src/models/users.model';
+import * as crypto from 'crypto';
 
 const execAsync = promisify(exec);
 //테스트 커밋
@@ -40,11 +40,6 @@ export class VideoService {
   async getFolderIdByUser(userId: string) {
     try {
       const user = await this.userModel.findById(userId);
-
-      if (!user) {
-        throw new Error('User not found');
-      }
-
       const nowDate = new Date();
       const folder = new this.folderModel({
         folderName: `${nowDate.getFullYear()}-${
@@ -63,7 +58,7 @@ export class VideoService {
 
       return folder;
     } catch (error) {
-      console.error('Error creating folder:', error);
+      console.log('에러 이름 : ', error);
       throw error;
     }
   }
@@ -71,79 +66,74 @@ export class VideoService {
   async processVideoAndImages(
     webmFile: Express.Multer.File,
     timestamps: number[],
-    userId: string,
     folderId: string,
   ) {
-    const videoUrls: string[] = [];
-    const imageUrls: string[] = [];
-
     const tempWebmFilePath = path.join(__dirname, `${folderId}_temp.webm`);
 
     await this.writeTemporaryFile(webmFile.buffer, tempWebmFilePath);
-
     if (timestamps.length === 0) {
       console.log('타임 스탬프 배열 비어있음.');
       return;
     }
 
     try {
-      const user = await this.userModel.findById(userId);
       const folder = await this.folderModel.findById(folderId);
 
-      let issueNum: number;
-      issueNum = 1;
-      for (const timestamp of timestamps) {
-        const imagePath = path.join(
-          __dirname,
-          `image_${folderId}_${issueNum}.jpg`,
-        );
-        const videoPath = path.join(
-          __dirname,
-          `video_${folderId}_${issueNum}.mp4`,
-        );
-        const imageUrl = await this.processImage(
-          tempWebmFilePath,
-          timestamp,
-          imagePath,
-          folderId,
-          issueNum,
-        );
-        const videoUrl = await this.processVideo(
-          tempWebmFilePath,
-          timestamp,
-          videoPath,
-          folderId,
-          issueNum,
-        );
+      try {
+        let issueNum: number = 1;
+        for (const timestamp of timestamps) {
+          const hashedImageName = `${this.hashString(
+            `image_${folderId}_${issueNum}`,
+          )}.jpg`;
+          const hashedVideoName = `${this.hashString(
+            `video_${folderId}_${issueNum}`,
+          )}.mp4`;
+          console.log(`${issueNum}번 이미지 및 비디오 이름 해싱 완료`);
 
-        imageUrls.push(imageUrl);
-        videoUrls.push(videoUrl);
-
-        const createdIssueFile = await this.saveMediaUrlsToMongoDB(
-          `https://static.qaing.co/image_${folderId}_${issueNum}.jpg`,
-          `https://static.qaing.co/video_${folderId}_${issueNum}.mp4`,
-          issueNum,
-        );
-        issueNum += 1;
-        folder.issues.push(createdIssueFile._id);
+          // 이미지와 비디오 처리
+          const imageUrl = await this.processMedia(
+            tempWebmFilePath,
+            timestamp,
+            hashedImageName,
+            'image',
+          );
+          console.log(`${issueNum}번 이미지 편집 및 s3업로드 완료`);
+          const videoUrl = await this.processMedia(
+            tempWebmFilePath,
+            timestamp,
+            hashedVideoName,
+            'video',
+          );
+          console.log(`${issueNum}번 비디오 편집 및 s3업로드 완료`);
+          const createdIssueFile = await this.saveMediaUrlsToMongoDB(
+            imageUrl,
+            videoUrl,
+            issueNum,
+          );
+          console.log(`${issueNum}번 이미지 및 비디오 몽고db에 저장 완료`);
+          folder.issues.push(createdIssueFile._id);
+          issueNum += 1;
+        }
+      } catch (error) {
+        console.log('파일 편집 중 에러 발생 : ', error);
+        throw error;
       }
 
       if (folder.issues.length == timestamps.length) {
         folder.status = true;
         this.notifyFolderUpdate(folderId, folder);
       } else {
-        throw new Error('이유 생성 중 에러 발생.');
+        throw new Error('이슈 생성 중 에러 발생.');
       }
 
       await folder.save();
-      await user.save();
       console.log('이미지 및 비디오 생성 완료!');
-      return;
     } catch (err) {
-      console.log('비디오 생성 중 에러 발생 : ', err);
+      console.log('파일 생성 중 에러 발생 : ', err.name);
       return;
     } finally {
       await this.deleteFile(tempWebmFilePath);
+      return;
     }
   }
 
@@ -173,101 +163,84 @@ export class VideoService {
     }
   }
 
-  private async processImage(
+  private async processMedia(
     webmFilePath: string,
     timestamp: number,
-    outputPath: string,
-    folderId: string,
-    issueNum: number,
+    hashedFileName: string,
+    mediaType: 'image' | 'video',
   ): Promise<string> {
-    const command = `ffmpeg -ss ${timestamp} -i ${webmFilePath} -vframes 1 -q:v 2 ${outputPath}`;
+    const outputPath = path.join(__dirname, hashedFileName);
+    console.log('파일저장 경로 : ', outputPath);
+    const command =
+      mediaType === 'image'
+        ? `ffmpeg -ss ${timestamp} -i ${webmFilePath} -vframes 1 -q:v 2 ${outputPath}`
+        : `ffmpeg -ss ${
+            timestamp - 10
+          } -i ${webmFilePath} -t 20 -c:v libx264 -preset ultrafast -b:v 600k -r 30 -c:a aac ${outputPath}
+        `;
+
+    // `ffmpeg -ss ${
+    //   timestamp - 10
+    // } -i ${webmFilePath} -t 20 -c:v libx264 -c:a aac ${outputPath}`;
+
+    if (mediaType == 'video') {
+      console.log('비디오 파일 cli 실행');
+    }
+
     try {
       await execAsync(command);
 
-      return this.uploadToS3(outputPath, 'image', folderId, issueNum);
+      if (mediaType == 'video') {
+        console.log('비디오 파일 cli 실행 완료 ');
+      }
+      await this.uploadToS3(outputPath, hashedFileName); // 해시된 파일명을 전달
+      return `https://static.qaing.co/${hashedFileName}`;
     } catch (error) {
-      console.error('이미지 생성 중 오류 발생:', error);
+      console.error(`${mediaType} 생성 중 오류 발생:`, error);
       throw error;
     }
-  }
-
-  private async processVideo(
-    webmFilePath: string,
-    timestamp: number,
-    outputPath: string,
-    folderId: string,
-    issueNum: number,
-  ): Promise<string> {
-    const editStartTime = Math.max(0, timestamp - 10);
-    const duration = 20;
-
-    try {
-      console.log('mp4 변환 시작');
-      await this.convertWebMToMp4(
-        webmFilePath,
-        outputPath,
-        editStartTime,
-        duration,
-      );
-      console.log('mp4 변환 완료');
-      return this.uploadToS3(outputPath, 'video', folderId, issueNum);
-    } catch (error) {
-      console.error('비디오 생성 중 오류 발생:', error);
-      throw error;
-    }
-  }
-
-  private async convertWebMToMp4(
-    inputPath: string,
-    outputPath: string,
-    startTime: number,
-    duration: number,
-  ): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      ffmpeg(inputPath)
-        .setStartTime(startTime)
-        .duration(duration)
-        .videoBitrate('600k')
-        .size('1920x1080')
-        .fps(30)
-        .output(outputPath)
-        .on('end', resolve)
-        .on('error', (error) => {
-          console.error('WebM to MP4 변환 중 오류:', error);
-          reject(error);
-        })
-        .run();
-    });
   }
 
   private async uploadToS3(
     filePath: string,
-    fileType: 'image' | 'video',
-    folderId: string,
-    issueNum: number,
+    hashedFileName: string,
   ): Promise<string> {
-    const key = `${fileType}_${folderId}_${issueNum}.${
-      fileType === 'image' ? 'jpg' : 'mp4'
-    }`;
-    const fileStream = fs.createReadStream(filePath);
+    let contentType: string;
+    let extension = hashedFileName.split('.').pop();
+    switch (extension) {
+      case 'jpg':
+        contentType = 'image/jpeg';
+        break;
+      case 'mp4':
+        contentType = 'video/mp4';
+        break;
+      default:
+        contentType = 'application/octet-stream';
+        break;
+    }
+    const fileStream = await fs.createReadStream(filePath);
     const uploadParams = {
       Bucket: this.configService.get('AWS_S3_BUCKET'),
-      Key: key,
+      Key: hashedFileName, // 해시된 파일명을 S3의 key로 사용
       Body: fileStream,
+      ContentDisposition: 'inline',
+      ContentType: contentType,
     };
 
     try {
       await this.s3Client.send(new PutObjectCommand(uploadParams));
       const fileUrl = `https://${this.configService.get(
         'AWS_S3_BUCKET',
-      )}.s3.${this.configService.get('AWS_REGION')}.amazonaws.com/${key}`;
-      console.log(`S3에 ${fileType} 업로드 및 URL 생성 완료: ${fileUrl}`);
+      )}.s3.${this.configService.get(
+        'AWS_REGION',
+      )}.amazonaws.com/${hashedFileName}`;
+      console.log(
+        `S3에 ${contentType}파일 업로드 및 URL 생성 완료: ${fileUrl}`,
+      );
       return fileUrl;
     } catch (error) {
-      console.error(`S3에 ${fileType} 업로드 중 오류 발생:`, error);
+      console.error(`S3에 파일 업로드 중 오류 발생:`, error);
       throw error;
-    } finally {
-      await this.deleteFile(filePath);
     }
   }
 
@@ -298,5 +271,9 @@ export class VideoService {
     } catch (error) {
       console.error('파일 삭제 중 오류 발생:', error);
     }
+  }
+
+  private hashString(input: string): string {
+    return crypto.createHash('sha256').update(input).digest('hex');
   }
 }

@@ -35,7 +35,6 @@ export class UserService {
 
   async getUserInfo(userId: string): Promise<User> {
     const user = await this.userModel.findById(userId);
-
     return user;
   }
 
@@ -60,6 +59,7 @@ export class UserService {
     updateUserDto: UpdateUserDto,
   ): Promise<User> {
     const existingUser = await this.userModel.findById(userId);
+
     // 업데이트된 필드값을 적용합니다.
     Object.assign(existingUser, updateUserDto);
 
@@ -78,6 +78,7 @@ export class UserService {
     if (!existingFolder) {
       throw new NotFoundException('Folder not found');
     }
+
     existingFolder.folderName = updateFolderDto.newFolderName;
 
     return existingFolder.save();

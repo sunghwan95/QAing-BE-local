@@ -10,11 +10,9 @@ import {
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from 'src/dto/updateUser.dto';
-import { UpdateFolderDto } from 'src/dto/updateFolder.dto';
 import { Types } from 'mongoose';
 
 @Controller('users')
-// @UseGuards(AuthMiddleware)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 

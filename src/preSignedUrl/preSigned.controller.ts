@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Post, Res } from '@nestjs/common';
 import { PresignedService } from './preSigned.service';
 
 @Controller('presignedurl')
-export class PresignurlController {
+export class PresignedController {
   constructor(private presignedService: PresignedService) {}
 
   @Post()

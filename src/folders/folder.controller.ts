@@ -8,17 +8,14 @@ import {
   UseGuards,
   Req,
   Res,
-  NotFoundException,
 } from '@nestjs/common';
 import { FolderService } from './folder.service';
 import { UpdateIssueFileDto } from 'src/dto/updateIssueFile.dto';
-import { AuthMiddleware } from 'src/auth/auth.middleware';
 import { UpdateFolderDto } from 'src/dto/updateFolder.dto';
 import { UserService } from 'src/users/user.service';
 import { Types } from 'mongoose';
 
 @Controller('folders')
-@UseGuards(AuthMiddleware)
 export class FoldersController {
   constructor(
     private readonly foldersService: FolderService,
@@ -34,8 +31,7 @@ export class FoldersController {
       }
 
       const folders = await this.userService.getAllUserFolders(userId);
-
-      return folders;
+      return res.json(folders);
     } catch (error) {
       console.error('폴더를 불러 오는 중 에러 발생 : ', error);
       console.log('에러 이름 : ', error.name);
@@ -90,7 +86,10 @@ export class FoldersController {
   }
 
   @Get(':folderId/issues')
-  async getFolderWithIssueFiles(@Param('folderId') folderId: string) {
+  async getFolderWithIssueFiles(
+    @Param('folderId') folderId: string,
+    @Res() res,
+  ) {
     try {
       const isValidObjectId = Types.ObjectId.isValid(folderId);
 
@@ -98,8 +97,9 @@ export class FoldersController {
         throw new Error('Invalid folderId');
       }
 
-      const issues = await this.foldersService.getIssuesFromFolder(folderId);
-      return issues;
+      const issuesWithFolder =
+        await this.foldersService.getIssuesFromFolder(folderId);
+      return res.json(issuesWithFolder);
     } catch (error) {
       console.error('이슈 목록 조회 중 에러 발생 : ', error);
       console.log('에러 이름 : ', error.name);
@@ -129,15 +129,15 @@ export class FoldersController {
   }
 
   @Delete('/:folderId/issues/:issueId')
-  async deleteIssueFile(@Res() res: any, @Param('issueId') issueId: string) {
+  async deleteIssueFile(
+    @Res() res: any,
+    @Param('issueId') issueId: string,
+    @Param('folderId') folderId: string,
+  ) {
     try {
-      const isDeletedIssueFile =
-        await this.foldersService.deleteIssueFile(issueId);
-      if (isDeletedIssueFile) {
-        return res.json({ message: 'success' });
-      } else {
-        throw new Error('이슈 파일 삭제 중 에러 발생');
-      }
+      await this.foldersService.deleteIssueFile(folderId, issueId);
+
+      return res.json({ message: 'success' });
     } catch (error) {
       console.log('에러 이름 : ', error.name);
     }

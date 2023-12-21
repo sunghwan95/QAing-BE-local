@@ -11,7 +11,7 @@ async function bootstrap() {
   });
   app.use(cookieParser());
 
-  await app.listen(8000, () =>
+  await app.listen(8080, () =>
     setInterval(
       () => console.log('Local : Nest.JS Server started on 8000'),
       10000,

@@ -6,7 +6,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/models/users.model';
 import { Model } from 'mongoose';
 import axios from 'axios';
-import * as jwt from 'jsonwebtoken';
 
 @Injectable()
 export class AuthService {

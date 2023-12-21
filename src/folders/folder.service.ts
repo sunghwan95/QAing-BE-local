@@ -42,7 +42,9 @@ export class FolderService {
         issuesWithContents.push(issue);
       }
     }
-    return issuesWithContents;
+
+    const { folderName } = folder;
+    return { folderName, issuesWithContents };
   }
 
   async updateIssueFileName(
@@ -68,17 +70,32 @@ export class FolderService {
     }
   }
 
-  async deleteIssueFile(issueId: string): Promise<boolean> {
+  async deleteIssueFile(
+    folderId: string,
+    issueId: string,
+  ): Promise<Folder | null> {
     try {
-      const issueFile = await this.issueFileModel.deleteOne({ _id: issueId });
+      const folder = await this.folderModel.findOne({ _id: folderId });
+      if (!folder) {
+        throw new NotFoundException('Folder not found');
+      }
 
+      // issueFile을 삭제합니다.
+      const issueFile = await this.issueFileModel.deleteOne({ _id: issueId });
       if (issueFile.deletedCount === 0) {
         throw new NotFoundException('Issue not found');
       }
 
-      return true;
+      // 폴더에서 해당 issueId를 제거합니다.
+      folder.issues = folder.issues.filter((id) => id.toString() !== issueId);
+
+      // 수정된 폴더를 저장합니다.
+      await folder.save();
+
+      return folder;
     } catch (error) {
-      return false;
+      console.error(`Failed to delete issue file: ${error}`);
+      throw new Error(`Failed to delete issue file: ${error.message}`);
     }
   }
 }

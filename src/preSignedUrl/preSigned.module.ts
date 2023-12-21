@@ -1,11 +1,11 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PresignurlController } from './preSigned.controller';
+import { PresignedController } from './preSigned.controller';
 import { PresignedService } from './preSigned.service';
 
 @Module({
   imports: [],
-  controllers: [PresignurlController],
+  controllers: [PresignedController],
   providers: [ConfigService, PresignedService], // 서비스 추가
   exports: [],
 })

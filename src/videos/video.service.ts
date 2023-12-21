@@ -37,18 +37,24 @@ export class VideoService {
     });
   }
 
+  private formatToTwoDigits(number: number): string {
+    return number.toString().padStart(2, '0');
+  }
+
   async getFolderIdByUser(userId: string) {
     try {
       const user = await this.userModel.findById(userId);
       const nowDate = new Date();
+      const folderName = `${nowDate.getFullYear()}-${this.formatToTwoDigits(
+        nowDate.getMonth() + 1,
+      )}-${this.formatToTwoDigits(nowDate.getDate())} ${this.formatToTwoDigits(
+        nowDate.getHours(),
+      )}:${this.formatToTwoDigits(nowDate.getMinutes())}`;
       const folder = new this.folderModel({
-        folderName: `${nowDate.getFullYear()}-${
-          nowDate.getMonth() + 1
-        }-${nowDate.getDate()} ${
-          nowDate.getHours() + 9
-        }:${nowDate.getMinutes()}`,
+        folderName,
         issues: [],
         status: false,
+        totalTasks: 0,
       });
 
       await folder.save();
@@ -76,11 +82,16 @@ export class VideoService {
       return;
     }
 
-    try {
-      const folder = await this.folderModel.findById(folderId);
+    const folder = await this.folderModel.findById(folderId);
+    const totalTasks = timestamps.length;
 
+    let completedTasks: number = 0;
+    let issueNum: number = 1;
+    let updatedProgress: number;
+
+    this.notifyFolderProgress(folderId, completedTasks, totalTasks);
+    try {
       try {
-        let issueNum: number = 1;
         for (const timestamp of timestamps) {
           const hashedImageName = `${this.hashString(
             `image_${folderId}_${issueNum}`,
@@ -112,19 +123,29 @@ export class VideoService {
           );
           console.log(`${issueNum}번 이미지 및 비디오 몽고db에 저장 완료`);
           folder.issues.push(createdIssueFile._id);
-          issueNum += 1;
+
+          completedTasks++;
+          // const progress = Math.floor((completedTasks / totalTasks) * 100);
+          this.notifyFolderProgress(folderId, completedTasks, totalTasks);
+
+          // updatedProgress = progress;
+          issueNum++;
         }
       } catch (error) {
         console.log('파일 편집 중 에러 발생 : ', error);
         throw error;
       }
 
-      if (folder.issues.length == timestamps.length) {
+      if (folder.issues.length == totalTasks) {
         folder.status = true;
         this.notifyFolderUpdate(folderId, folder);
       } else {
         throw new Error('이슈 생성 중 에러 발생.');
       }
+
+      folder.totalTasks = totalTasks;
+      folder.completedTasks = completedTasks;
+      // folder.progress = `${updatedProgress}%`;
 
       await folder.save();
       console.log('이미지 및 비디오 생성 완료!');
@@ -149,20 +170,6 @@ export class VideoService {
     }
   }
 
-  subscribeToFolderUpdates(folderId: string, callback: Function) {
-    if (!this.folderUpdateSubscribers.has(folderId)) {
-      this.folderUpdateSubscribers.set(folderId, []);
-    }
-    this.folderUpdateSubscribers.get(folderId).push(callback);
-  }
-
-  private notifyFolderUpdate(folderId: string, folder: Folder) {
-    const subscribers = this.folderUpdateSubscribers.get(folderId);
-    if (subscribers) {
-      subscribers.forEach((callback) => callback(folder));
-    }
-  }
-
   private async processMedia(
     webmFilePath: string,
     timestamp: number,
@@ -176,7 +183,7 @@ export class VideoService {
         ? `ffmpeg -ss ${timestamp} -i ${webmFilePath} -vframes 1 -q:v 2 ${outputPath}`
         : `ffmpeg -ss ${
             timestamp - 10
-          } -i ${webmFilePath} -t 20 -c:v libx264 -preset ultrafast -b:v 600k -r 30 -c:a aac ${outputPath}
+          } -i ${webmFilePath} -t 20 -c:v libx264 -preset superfast -b:v 600k -r 30 -c:a aac ${outputPath}
         `;
 
     // `ffmpeg -ss ${
@@ -275,5 +282,32 @@ export class VideoService {
 
   private hashString(input: string): string {
     return crypto.createHash('sha256').update(input).digest('hex');
+  }
+
+  subscribeToFolderUpdates(folderId: string, callback: Function) {
+    if (!this.folderUpdateSubscribers.has(folderId)) {
+      this.folderUpdateSubscribers.set(folderId, []);
+    }
+    this.folderUpdateSubscribers.get(folderId).push(callback);
+  }
+
+  private notifyFolderUpdate(folderId: string, folder: Folder) {
+    const subscribers = this.folderUpdateSubscribers.get(folderId);
+    if (subscribers) {
+      subscribers.forEach((callback) => callback(folder));
+      console.log('///////////이슈 파일 FE로 전송 성공///////////');
+    }
+  }
+
+  private notifyFolderProgress(
+    folderId: string,
+    progress: number,
+    totalTasks: number,
+  ) {
+    const subscribers = this.folderUpdateSubscribers.get(folderId);
+    if (subscribers) {
+      console.log('///////////이슈 파일 Progress 전송///////////');
+      subscribers.forEach((callback) => callback({ progress, totalTasks }));
+    }
   }
 }

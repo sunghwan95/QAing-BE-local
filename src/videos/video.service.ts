@@ -5,7 +5,11 @@ import { IssueFile } from 'src/models/issueFiles.model';
 import { Folder } from 'src/models/folders.model';
 import * as fs from 'fs';
 import * as path from 'path';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+} from '@aws-sdk/client-s3';
 import { ConfigService } from '@nestjs/config';
 import { exec } from 'child_process';
 import { promisify } from 'util';
@@ -44,12 +48,14 @@ export class VideoService {
   async getFolderIdByUser(userId: string) {
     try {
       const user = await this.userModel.findById(userId);
-      const nowDate = new Date();
-      const folderName = `${nowDate.getFullYear()}-${this.formatToTwoDigits(
-        nowDate.getMonth() + 1,
-      )}-${this.formatToTwoDigits(nowDate.getDate())} ${this.formatToTwoDigits(
-        nowDate.getHours(),
-      )}:${this.formatToTwoDigits(nowDate.getMinutes())}`;
+      const kstDate = new Date();
+      kstDate.setTime(kstDate.getTime() + 9 * 60 * 60 * 1000);
+      const folderName = `${kstDate.getFullYear()}-${this.formatToTwoDigits(
+        kstDate.getMonth() + 1,
+      )}-${this.formatToTwoDigits(kstDate.getDate())} ${this.formatToTwoDigits(
+        kstDate.getHours(),
+      )}:${this.formatToTwoDigits(kstDate.getMinutes())}`;
+
       const folder = new this.folderModel({
         folderName,
         issues: [],
@@ -64,7 +70,6 @@ export class VideoService {
 
       return folder;
     } catch (error) {
-      console.log('에러 이름 : ', error);
       throw error;
     }
   }
@@ -77,19 +82,16 @@ export class VideoService {
     const tempWebmFilePath = path.join(__dirname, `${folderId}_temp.webm`);
 
     await this.writeTemporaryFile(webmFile.buffer, tempWebmFilePath);
-    if (timestamps.length === 0) {
-      console.log('타임 스탬프 배열 비어있음.');
-      return;
-    }
+    if (timestamps.length === 0) return;
 
     const folder = await this.folderModel.findById(folderId);
     const totalTasks = timestamps.length;
 
     let completedTasks: number = 0;
     let issueNum: number = 1;
-    let updatedProgress: number;
 
     this.notifyFolderProgress(folderId, completedTasks, totalTasks);
+
     try {
       try {
         for (const timestamp of timestamps) {
@@ -99,40 +101,31 @@ export class VideoService {
           const hashedVideoName = `${this.hashString(
             `video_${folderId}_${issueNum}`,
           )}.mp4`;
-          console.log(`${issueNum}번 이미지 및 비디오 이름 해싱 완료`);
 
-          // 이미지와 비디오 처리
           const imageUrl = await this.processMedia(
             tempWebmFilePath,
             timestamp,
             hashedImageName,
             'image',
           );
-          console.log(`${issueNum}번 이미지 편집 및 s3업로드 완료`);
           const videoUrl = await this.processMedia(
             tempWebmFilePath,
             timestamp,
             hashedVideoName,
             'video',
           );
-          console.log(`${issueNum}번 비디오 편집 및 s3업로드 완료`);
           const createdIssueFile = await this.saveMediaUrlsToMongoDB(
             imageUrl,
             videoUrl,
             issueNum,
           );
-          console.log(`${issueNum}번 이미지 및 비디오 몽고db에 저장 완료`);
           folder.issues.push(createdIssueFile._id);
 
           completedTasks++;
-          // const progress = Math.floor((completedTasks / totalTasks) * 100);
           this.notifyFolderProgress(folderId, completedTasks, totalTasks);
-
-          // updatedProgress = progress;
           issueNum++;
         }
       } catch (error) {
-        console.log('파일 편집 중 에러 발생 : ', error);
         throw error;
       }
 
@@ -145,12 +138,9 @@ export class VideoService {
 
       folder.totalTasks = totalTasks;
       folder.completedTasks = completedTasks;
-      // folder.progress = `${updatedProgress}%`;
 
       await folder.save();
-      console.log('이미지 및 비디오 생성 완료!');
     } catch (err) {
-      console.log('파일 생성 중 에러 발생 : ', err.name);
       return;
     } finally {
       await this.deleteFile(tempWebmFilePath);
@@ -165,7 +155,6 @@ export class VideoService {
     try {
       await fs.promises.writeFile(filePath, buffer, { flag: 'w' });
     } catch (error) {
-      console.error('임시 파일 쓰기 에러:', error);
       throw error;
     }
   }
@@ -174,36 +163,39 @@ export class VideoService {
     webmFilePath: string,
     timestamp: number,
     hashedFileName: string,
+
     mediaType: 'image' | 'video',
   ): Promise<string> {
     const outputPath = path.join(__dirname, hashedFileName);
-    console.log('파일저장 경로 : ', outputPath);
     const command =
       mediaType === 'image'
         ? `ffmpeg -ss ${timestamp} -i ${webmFilePath} -vframes 1 -q:v 2 ${outputPath}`
         : `ffmpeg -ss ${
             timestamp - 10
           } -i ${webmFilePath} -t 20 -c:v libx264 -preset superfast -b:v 600k -r 30 -c:a aac ${outputPath}
-        `;
-
-    // `ffmpeg -ss ${
-    //   timestamp - 10
-    // } -i ${webmFilePath} -t 20 -c:v libx264 -c:a aac ${outputPath}`;
-
-    if (mediaType == 'video') {
-      console.log('비디오 파일 cli 실행');
-    }
+      `;
 
     try {
       await execAsync(command);
-
-      if (mediaType == 'video') {
-        console.log('비디오 파일 cli 실행 완료 ');
-      }
       await this.uploadToS3(outputPath, hashedFileName); // 해시된 파일명을 전달
       return `https://static.qaing.co/${hashedFileName}`;
     } catch (error) {
       console.error(`${mediaType} 생성 중 오류 발생:`, error);
+      throw error;
+    }
+  }
+
+  async deleteFromS3(hashedFileName: string): Promise<void> {
+    const deleteParams = {
+      Bucket: this.configService.get('AWS_S3_BUCKET'),
+      Key: hashedFileName,
+    };
+
+    try {
+      await this.s3Client.send(new DeleteObjectCommand(deleteParams));
+      return;
+    } catch (error) {
+      console.error(`Error in deleting file ${hashedFileName} from S3:`, error);
       throw error;
     }
   }
@@ -214,6 +206,7 @@ export class VideoService {
   ): Promise<string> {
     let contentType: string;
     let extension = hashedFileName.split('.').pop();
+
     switch (extension) {
       case 'jpg':
         contentType = 'image/jpeg';
@@ -225,10 +218,11 @@ export class VideoService {
         contentType = 'application/octet-stream';
         break;
     }
+
     const fileStream = await fs.createReadStream(filePath);
     const uploadParams = {
       Bucket: this.configService.get('AWS_S3_BUCKET'),
-      Key: hashedFileName, // 해시된 파일명을 S3의 key로 사용
+      Key: hashedFileName,
       Body: fileStream,
       ContentDisposition: 'inline',
       ContentType: contentType,
@@ -241,9 +235,6 @@ export class VideoService {
       )}.s3.${this.configService.get(
         'AWS_REGION',
       )}.amazonaws.com/${hashedFileName}`;
-      console.log(
-        `S3에 ${contentType}파일 업로드 및 URL 생성 완료: ${fileUrl}`,
-      );
       return fileUrl;
     } catch (error) {
       console.error(`S3에 파일 업로드 중 오류 발생:`, error);
@@ -295,7 +286,6 @@ export class VideoService {
     const subscribers = this.folderUpdateSubscribers.get(folderId);
     if (subscribers) {
       subscribers.forEach((callback) => callback(folder));
-      console.log('///////////이슈 파일 FE로 전송 성공///////////');
     }
   }
 
@@ -306,7 +296,6 @@ export class VideoService {
   ) {
     const subscribers = this.folderUpdateSubscribers.get(folderId);
     if (subscribers) {
-      console.log('///////////이슈 파일 Progress 전송///////////');
       subscribers.forEach((callback) => callback({ progress, totalTasks }));
     }
   }

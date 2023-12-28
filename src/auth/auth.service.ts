@@ -33,6 +33,7 @@ export class AuthService {
         refreshToken: profile.refreshToken,
       });
     } else {
+      user.accessToken = profile.accessToken;
       user.refreshToken = profile.refreshToken;
     }
     await user.save();

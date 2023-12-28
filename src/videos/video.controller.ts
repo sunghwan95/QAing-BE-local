@@ -38,14 +38,12 @@ export class VideoController {
       }
 
       const folder = await this.videoService.getFolderIdByUser(userId);
-      console.log('폴더 생성');
       return res.json({
         folderId: folder._id,
         status: folder.status,
         folderName: folder.folderName,
       });
     } catch (error) {
-      console.log('에러 이름 : ', error.name);
       return res.json({ message: 'failure' });
     }
   }
@@ -62,11 +60,9 @@ export class VideoController {
     try {
       const parsedTimestamps = JSON.parse(timestamps);
       const userId = req.user._id;
-      console.log('원본 파일 : ', webmFile);
-      console.log('timestamps : ', timestamps);
 
       if (!userId) {
-        throw new Error('유저를 찾을 수 없음.');
+        return res.status(404).json({ message: 'fail' });
       }
       await this.videoService.processVideoAndImages(
         webmFile,
@@ -75,8 +71,7 @@ export class VideoController {
       );
       return res.json({ message: 'success' });
     } catch (error) {
-      console.log('에러 이름 : ', error.name);
-      return res.json({ message: 'Fail' });
+      return res.status(404).json({ message: 'fail' });
     }
   }
 
@@ -90,9 +85,10 @@ export class VideoController {
       'Cache-Control': 'no-cache',
       Connection: 'keep-alive',
     });
-    console.log('sse 연결');
-    res.header('Access-Control-Allow-Origin', process.env.TEST_REDIRECT_FE_URL);
+
+    res.header('Access-Control-Allow-Origin', process.env.PROD_REDIRECT_FE_URL);
     res.header('Access-Control-Allow-Credentials', 'true');
+
     this.videoService.subscribeToFolderUpdates(folderId, (folder: Folder) => {
       if (folder.status) {
         // Folder 상태 업데이트 시 메시지 전송

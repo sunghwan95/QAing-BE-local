@@ -39,8 +39,6 @@ export class AuthController {
       // `accessToken`은 생성하지만, `refreshToken`은 Google로부터 받은 것을 사용
       const accessToken = user.accessToken;
       const refreshToken = user.refreshToken; // Google로부터 받은 refreshToken 사용
-      console.log('리퀘스트 헤더 : ', req.headers.host);
-      const sameSite = req.headers.host.includes('localhost') ? 'None' : '';
 
       // 쿠키에 토큰 설정
       res.cookie('refresh-token', refreshToken, {
@@ -59,40 +57,4 @@ export class AuthController {
         .json({ success: false, message: 'Google authentication failed' });
     }
   }
-
-  // @Get('refresh')
-  // async refreshAccessToken(@Req() req, @Res() res) {
-  //   try {
-  //     const sameSite = req.headers.host.includes('localhost') ? 'None' : '';
-  //     const refreshToken = req.cookies['refresh-token'];
-  //     if (!refreshToken) {
-  //       throw new Error('Refresh token not provided');
-  //     }
-
-  //     const decoded = this.jwtService.verify(
-  //       refreshToken,
-  //       this.configService.get('JWT_SECRET'),
-  //     ) as any;
-
-  //     const partialUser: Partial<User> = {
-  //       _id: decoded.userId,
-  //       userEmail: decoded.email,
-  //     };
-
-  //     const user = partialUser as User;
-
-  //     const accessToken = this.authService.generateJwtToken(user);
-
-  //     res.cookie('access-token', accessToken, {
-  //       domain: 'localhost',
-  //     });
-
-  //     res.status(HttpStatus.OK).json({ success: true, accessToken });
-  //   } catch (error) {
-  //     console.error('Token refresh failed:', error);
-  //     res
-  //       .status(HttpStatus.UNAUTHORIZED)
-  //       .json({ success: false, message: 'Invalid refresh token' });
-  //   }
-  // }
 }

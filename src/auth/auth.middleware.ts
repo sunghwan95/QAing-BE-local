@@ -17,7 +17,6 @@ export class AuthMiddleware implements NestMiddleware {
   async use(req: Request, res: Response, next: NextFunction) {
     const accessToken = req.cookies['access-token'];
     const refreshToken = req.cookies['refresh-token'];
-    const sameSite = req.headers.host.includes('localhost') ? 'none' : 'lax';
     if (!accessToken && !refreshToken) {
       // 로그인을 하지 않은 상태
       return res.redirect('http://localhost:3000/auth/signup');

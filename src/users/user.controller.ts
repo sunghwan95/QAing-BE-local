@@ -7,14 +7,21 @@ import {
   Param,
   Req,
   Res,
+  HttpStatus,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from 'src/dto/updateUser.dto';
-import { Types } from 'mongoose';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { User } from 'src/models/users.model';
 
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    @InjectModel(User.name)
+    private userModel: Model<User>,
+  ) {}
 
   @Put('preInfo')
   async updatePreInfo(
@@ -35,7 +42,7 @@ export class UserController {
         throw new Error('유저 정보 업데이트 중 에러 발생');
       }
     } catch (error) {
-      console.log('에러 이름 : ', error.name);
+      return res.status(404).json({ message: 'fail' });
     }
   }
 
@@ -44,14 +51,13 @@ export class UserController {
     try {
       const userId = req.user._id;
       if (!userId) {
-        throw new Error('검색된 userId 없음.');
+        return res.status(404).json({ message: 'fail' });
       }
 
       const findUser = await this.userService.getUserInfo(userId);
       return res.json(findUser);
     } catch (error) {
-      console.error('유저 정보 조회 중 에러 발생 : ', error);
-      console.log(error.name);
+      return res.status(404).json({ message: 'fail' });
     }
   }
 
@@ -64,14 +70,35 @@ export class UserController {
     try {
       const userId = req.user._id;
       if (!userId) {
-        throw new Error('검색된 userId 없음.');
+        return res.status(404).json({ message: 'fail' });
       }
       await this.userService.updateUserProfile(userId, updateUserDto);
 
       return res.json({ message: 'success' });
     } catch (error) {
-      console.error('유저 프로필 업데이트 중 에러 발생 : ', error);
-      console.log('에러 이름 : ', error.name);
+      return res.status(404).json({ message: 'fail' });
     }
+  }
+
+  @Get('logout')
+  async logout(@Req() req, @Res() res) {
+    const userId = req.user._id;
+    const user = await this.userModel.findByIdAndUpdate(userId, {
+      accessToken: null,
+      refreshToken: null,
+    });
+
+    res.cookie('refresh-token', user.refreshToken, {
+      expires: new Date(0),
+      domain: 'localhost',
+    });
+    res.cookie('access-token', user.accessToken, {
+      expires: new Date(0),
+      domain: 'localhost',
+    });
+
+    return res.status(HttpStatus.OK).json({
+      message: 'success',
+    });
   }
 }

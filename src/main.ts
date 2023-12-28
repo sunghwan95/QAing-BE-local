@@ -7,13 +7,12 @@ async function bootstrap() {
   app.enableCors({
     origin: 'http://localhost:3000',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
   });
   app.use(cookieParser());
 
   await app.listen(8080, () =>
     setInterval(
-      () => console.log('Local : Nest.JS Server started on 8000'),
+      () => console.log('Local : Nest.JS Server started on 8080'),
       10000,
     ),
   );

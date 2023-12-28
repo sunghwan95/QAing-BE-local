@@ -12,6 +12,9 @@ import { GoogleStrategy } from './google.strategy';
 import { ConfigService } from '@nestjs/config';
 import { AppService } from 'src/app.service';
 import { Folder, FolderSchema } from 'src/models/folders.model';
+import { IssueFile, IssueFileSchema } from 'src/models/issueFiles.model';
+import { VideoService } from 'src/videos/video.service';
+import { EmailService } from 'src/email/email.service';
 
 @Module({
   imports: [
@@ -22,6 +25,7 @@ import { Folder, FolderSchema } from 'src/models/folders.model';
     MongooseModule.forFeature([
       { name: User.name, schema: UserSchema },
       { name: Folder.name, schema: FolderSchema },
+      { name: IssueFile.name, schema: IssueFileSchema },
     ]),
     UserModule,
     PassportModule.register({ defaultStrategy: 'google' }),
@@ -35,6 +39,8 @@ import { Folder, FolderSchema } from 'src/models/folders.model';
     ConfigService,
     AppService,
     UserService,
+    VideoService,
+    EmailService,
   ],
 })
 export class AuthModule {}

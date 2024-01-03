@@ -1,6 +1,8 @@
 //issueFiles.model.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, SchemaOptions } from 'mongoose';
+import { Document, SchemaOptions, Types } from 'mongoose';
+import { User } from './users.model';
+import { Folder } from './folders.model';
 
 const options: SchemaOptions = {
   timestamps: true,
@@ -15,6 +17,12 @@ export class IssueFile extends Document {
 
   @Prop()
   videoUrl: string;
+
+  @Prop({})
+  folder: string;
+
+  @Prop({})
+  owner: string;
 }
 
 export const IssueFileSchema = SchemaFactory.createForClass(IssueFile);

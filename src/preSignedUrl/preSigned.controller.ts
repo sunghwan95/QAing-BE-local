@@ -49,6 +49,7 @@ export class PresignurlController {
     @Req() req: any,
     @Res() res: any,
     @Body('filename') filename: string,
+    @Body('originFileUrl') originFileUrl: string,
     @Body('isProfileImg') isProfileImg: boolean,
   ) {
     const userId = req.user._id;
@@ -57,7 +58,12 @@ export class PresignurlController {
       await this.presignedService.updateUserFile(userId, fileUrl);
       return res.json({ message: 'success', fileUrl });
     } else {
-      await this.presignedService.updateIssueFileImg(filename, fileUrl);
+      await this.presignedService.updateIssueFileImg(
+        userId,
+        filename,
+        fileUrl,
+        originFileUrl,
+      );
       return res.json({ message: 'success', fileUrl });
     }
   }

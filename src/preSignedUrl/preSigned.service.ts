@@ -10,6 +10,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/models/users.model';
 import { Model } from 'mongoose';
 import { IssueFile } from 'src/models/issueFiles.model';
+import { EditedImg } from 'src/models/editedImg.model';
 
 @Injectable()
 export class PresignedService {
@@ -18,6 +19,8 @@ export class PresignedService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(IssueFile.name)
     private readonly issueFileModel: Model<IssueFile>,
+    @InjectModel(EditedImg.name)
+    private readonly editedImgModel: Model<EditedImg>,
   ) {}
 
   private createS3Client(): S3Client {
@@ -69,12 +72,22 @@ export class PresignedService {
     });
   }
 
-  async updateIssueFileImg(filename: string, fileUrl: string): Promise<void> {
-    const findIssueFile = await this.issueFileModel.findOne({ filename });
+  async updateIssueFileImg(
+    userId: string,
+    filename: string,
+    fileUrl: string,
+    originFileUrl: string,
+  ): Promise<void> {
+    const user = await this.userModel.findById(userId);
+    const findOriginImg = await this.issueFileModel.findOne({ originFileUrl });
 
-    findIssueFile.editedImage.editedImageName = 'filename';
-    findIssueFile.editedImage.editedImageUrl = fileUrl;
+    const editedImg = await this.editedImgModel.create({
+      editedImgName: filename,
+      editedImgUrl: fileUrl,
+      owner: user.userName,
+    });
 
-    await findIssueFile.save();
+    findOriginImg.editedImage = editedImg;
+    await findOriginImg.save();
   }
 }

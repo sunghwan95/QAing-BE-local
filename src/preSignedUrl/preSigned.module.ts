@@ -12,6 +12,8 @@ import { IssueFile, IssueFileSchema } from 'src/models/issueFiles.model';
 import { VideoService } from 'src/videos/video.service';
 import { AuthService } from 'src/auth/auth.service';
 import { EmailService } from 'src/email/email.service';
+import { EditedImg } from 'src/models/editedImg.model';
+import { EditedImgSchema } from 'src/models/editedImg.model';
 
 @Module({
   imports: [
@@ -19,6 +21,7 @@ import { EmailService } from 'src/email/email.service';
       { name: User.name, schema: UserSchema },
       { name: IssueFile.name, schema: IssueFileSchema },
       { name: Folder.name, schema: FolderSchema },
+      { name: EditedImg.name, schema: EditedImgSchema },
     ]),
   ],
   controllers: [PresignurlController],

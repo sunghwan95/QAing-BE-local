@@ -17,4 +17,4 @@ export class EditedImg extends Document {
   owner: string;
 }
 
-export const IssueFileSchema = SchemaFactory.createForClass(EditedImg);
+export const EditedImgSchema = SchemaFactory.createForClass(EditedImg);

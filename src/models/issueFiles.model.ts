@@ -1,8 +1,7 @@
 //issueFiles.model.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, SchemaOptions, Types } from 'mongoose';
-import { User } from './users.model';
-import { Folder } from './folders.model';
+import { Document, SchemaOptions } from 'mongoose';
+import * as mongoose from 'mongoose';
 
 const options: SchemaOptions = {
   timestamps: true,
@@ -24,7 +23,7 @@ export class IssueFile extends Document {
   @Prop({})
   owner: string;
 
-  @Prop({})
+  @Prop({ type: mongoose.Schema.Types.Mixed })
   editedImage: {
     editedImageName: string;
     editedImageUrl: string;

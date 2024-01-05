@@ -79,7 +79,9 @@ export class PresignedService {
     originFileUrl: string,
   ): Promise<void> {
     const user = await this.userModel.findById(userId);
-    const findOriginImg = await this.issueFileModel.findOne({ originFileUrl });
+    const findOriginImg = await this.issueFileModel.findOne({
+      imageUrl: originFileUrl,
+    });
 
     const editedImg = await this.editedImgModel.create({
       editedImgName: filename,

@@ -167,20 +167,38 @@ export class VideoService {
     }
   }
 
+  private async getVideoDuration(filePath: string): Promise<number> {
+    try {
+      const command = `ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${filePath}"`;
+      const { stdout } = await execAsync(command);
+      return parseFloat(stdout.trim());
+    } catch (error) {
+      console.error('Error getting video duration:', error);
+      throw error;
+    }
+  }
+
   private async processMedia(
     webmFilePath: string,
     timestamp: number,
     hashedFileName: string,
-
     mediaType: 'image' | 'video',
   ): Promise<string> {
+    let totalVideoLength: number;
+    if (mediaType == 'video') {
+      totalVideoLength = await this.getVideoDuration(webmFilePath);
+    }
     const outputPath = path.join(__dirname, hashedFileName);
     const command =
       mediaType === 'image'
         ? `ffmpeg -ss ${timestamp} -i ${webmFilePath} -vframes 1 -q:v 2 ${outputPath}`
         : `ffmpeg -ss ${
-            timestamp - 10
-          } -i ${webmFilePath} -t 20 -c:v libx264 -preset superfast -b:v 600k -r 30 -c:a aac ${outputPath}
+            timestamp - 10 < 0 ? 0 : timestamp - 10
+          } -i ${webmFilePath} -t ${
+            timestamp + 10 > totalVideoLength
+              ? totalVideoLength
+              : timestamp + 10
+          } -c:v libx264 -preset superfast -b:v 600k -r 30 -c:a aac ${outputPath}
       `;
 
     try {

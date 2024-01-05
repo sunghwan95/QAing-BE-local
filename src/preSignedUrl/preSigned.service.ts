@@ -9,12 +9,15 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { User } from 'src/models/users.model';
 import { Model } from 'mongoose';
+import { IssueFile } from 'src/models/issueFiles.model';
 
 @Injectable()
 export class PresignedService {
   constructor(
     private configService: ConfigService,
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    @InjectModel(IssueFile.name)
+    private readonly issueFileModel: Model<IssueFile>,
   ) {}
 
   private createS3Client(): S3Client {
@@ -27,7 +30,11 @@ export class PresignedService {
     });
   }
 
-  async getUploadPresignedUrl(filename: string, type: string): Promise<string> {
+  async getUploadPresignedUrl(
+    filename: string,
+    type: string,
+    isProfileImg: boolean,
+  ): Promise<string> {
     try {
       const client = this.createS3Client();
       const command = new PutObjectCommand({
@@ -42,21 +49,32 @@ export class PresignedService {
     }
   }
 
-  async getDeletePresignedUrl(filename: string): Promise<string> {
-    const client = this.createS3Client();
-    const command = new DeleteObjectCommand({
-      Bucket: this.configService.get('AWS_S3_BUCKET'),
-      Key: filename,
-    });
+  // async getDeletePresignedUrl(filename: string): Promise<string> {
+  //   const client = this.createS3Client();
+  //   const command = new DeleteObjectCommand({
+  //     Bucket: this.configService.get('AWS_S3_BUCKET'),
+  //     Key: filename,
+  //   });
 
-    return getSignedUrl(client, command);
-  }
+  //   return getSignedUrl(client, command);
+  // }
 
   constructFileUrl(filename: string): string {
     return `https://static.qaing.co/${filename}`;
   }
 
   async updateUserFile(userId: string, fileUrl: string): Promise<void> {
-    await this.userModel.findByIdAndUpdate(userId, { userProfileImg: fileUrl });
+    await this.userModel.findByIdAndUpdate(userId, {
+      userProfileImg: fileUrl,
+    });
+  }
+
+  async updateIssueFileImg(filename: string, fileUrl: string): Promise<void> {
+    const findIssueFile = await this.issueFileModel.findOne({ filename });
+
+    findIssueFile.editedImage.editedImageName = 'filename';
+    findIssueFile.editedImage.editedImageUrl = fileUrl;
+
+    await findIssueFile.save();
   }
 }

@@ -23,6 +23,15 @@ export class IssueFile extends Document {
 
   @Prop({})
   owner: string;
+
+  @Prop({})
+  editedImage: {
+    editedImageName: string;
+    editedImageUrl: string;
+  };
+
+  @Prop({})
+  capturedImageUrls: string[];
 }
 
 export const IssueFileSchema = SchemaFactory.createForClass(IssueFile);

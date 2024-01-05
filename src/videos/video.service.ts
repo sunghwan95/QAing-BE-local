@@ -280,6 +280,7 @@ export class VideoService {
         issueName: `이슈 ${issueNum}`,
         imageUrl,
         videoUrl,
+        editedImage: null,
         folder: folder.folderName,
         owner: folder.owner,
       });

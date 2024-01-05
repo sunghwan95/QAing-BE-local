@@ -24,7 +24,7 @@ export class IssueFile extends Document {
   owner: string;
 
   @Prop({ type: Types.ObjectId })
-  editedImage: EditedImg;
+  editedImage: EditedImg | null;
 
   @Prop({})
   capturedImageUrls: string[];

@@ -27,8 +27,8 @@ export class Folder extends Document {
   @Prop()
   progress: string;
 
-  @Prop({})
-  owner: string;
+  @Prop({ type: Types.ObjectId, ref: 'User' })
+  owner: User;
 }
 
 export const FolderSchema = SchemaFactory.createForClass(Folder);

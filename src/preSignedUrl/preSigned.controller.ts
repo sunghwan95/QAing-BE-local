@@ -58,12 +58,7 @@ export class PresignurlController {
       await this.presignedService.updateUserFile(userId, fileUrl);
       return res.json({ message: 'success', fileUrl });
     } else {
-      await this.presignedService.updateIssueFileImg(
-        userId,
-        filename,
-        fileUrl,
-        originFileUrl,
-      );
+      await this.presignedService.editContent(fileUrl, originFileUrl);
       return res.json({ message: 'success', fileUrl });
     }
   }

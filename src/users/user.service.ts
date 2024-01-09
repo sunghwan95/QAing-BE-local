@@ -112,12 +112,14 @@ export class UserService {
         path: 'issues',
         populate: {
           path: 'images',
+          model: 'Image',
         },
       })
       .populate({
         path: 'issues',
         populate: {
           path: 'video',
+          model: 'Video',
         },
       });
 
@@ -125,23 +127,27 @@ export class UserService {
       throw new NotFoundException('Folder not found');
     }
 
-    for (const issue of folder.issues) {
-      const issueFile = await this.issueFileModel.findById(issue._id);
-      const mp4File = issueFile.video.originVideoUrl;
+    for (const issueId of folder.issues) {
+      const issueFile = await this.issueFileModel.findById(issueId);
+      const videoId = issueFile.video;
+      const mp4File = await this.videoModel.findById(videoId);
 
-      for (const image of issueFile.images) {
+      for (const imageId of issueFile.images) {
+        const image = await this.imageModel.findById(imageId);
         const imageName = image.originImageUrl.split('/').pop();
         if (imageName) {
           await this.videoService.deleteFromS3(imageName);
+          await this.imageModel.deleteOne({ _id: imageId });
         } else {
           continue;
         }
       }
 
       if (mp4File) {
-        const videoName = mp4File.split('/').pop();
+        const videoName = mp4File.originVideoUrl.split('/').pop();
         if (videoName) {
           await this.videoService.deleteFromS3(videoName);
+          await this.videoModel.deleteOne({ _id: videoId });
         }
       } else {
         break;

@@ -32,7 +32,6 @@ export class AuthMiddleware implements NestMiddleware {
           googleUserProfile.email,
         );
         req.user = user;
-        console.log('액세스 토큰 보유 유저 : ', req.user);
         return next();
       }
     } catch (error) {
@@ -52,7 +51,6 @@ export class AuthMiddleware implements NestMiddleware {
             googleUserProfile.email,
           );
           req.user = user;
-          console.log('accesstoken 재발급 유저 : ', req.user);
           return next();
         } catch (innerError) {
           //refreshtoken 만료시 유저를 로그인 페이지로 리디렉션

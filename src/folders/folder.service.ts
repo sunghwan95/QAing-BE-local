@@ -40,7 +40,6 @@ export class FolderService {
       console.error(`Folder not found for id: ${folderId}`);
       throw new NotFoundException('Folder not found');
     }
-    console.log('폴더 : ', folder);
 
     const issuesWithContents = [];
 
@@ -56,8 +55,6 @@ export class FolderService {
           model: 'Video',
         });
 
-      console.log('이슈 : ', issue);
-
       if (issue) {
         const issueData = {
           issueName: issue.issueName,
@@ -69,12 +66,6 @@ export class FolderService {
       }
     }
 
-    console.log('issueWithContent : ', issuesWithContents);
-    console.log(
-      'images : ',
-      issuesWithContents[0].images,
-      issuesWithContents[1].images,
-    );
     const { folderName } = folder;
     return { folderName, issuesWithContents };
   }
@@ -113,25 +104,30 @@ export class FolderService {
       }
 
       // 데이터베이스에서 이슈 파일을 찾고
-      const issueFile = (await this.issueFileModel.findById(issueId)).populate([
-        'images',
-        'video',
-      ]);
+      const issueFile = await this.issueFileModel
+        .findById(issueId)
+        .populate({
+          path: 'images',
+          model: 'Image',
+        })
+        .populate({
+          path: 'video',
+          model: 'Video',
+        });
       if (!issueFile) {
         throw new NotFoundException('Issue not found');
       }
 
       // S3에서 이미지와 비디오 파일 삭제
-      const images = (await issueFile).images;
+      const images = issueFile.images;
       const imageIds = images.map((image) => image._id);
 
-      for (let i = 0; i <= images.length; i++) {
+      for (const image of images) {
         if (images) {
-          const imageName = images[i].originImageUrl.split('/').pop(); // URL에서 파일 이름 추출
+          const imageName = image.originImageUrl.split('/').pop(); // URL에서 파일 이름 추출
           if (imageName) {
             await this.videoService.deleteFromS3(imageName);
           } else {
-            console.log('s3에서 이미지를 찾을 수 없음.');
             continue;
           }
         } else {

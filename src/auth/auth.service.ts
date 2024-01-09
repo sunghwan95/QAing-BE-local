@@ -17,7 +17,6 @@ export class AuthService {
   ) {}
 
   async findOrCreate(profile: any): Promise<User> {
-    console.log('프로필 : ', profile);
     const userEmail = profile.userEmail; // 여기에 사용자의 이메일 또는 다른 식별 정보를 넣어야 합니다.
     let user = await this.userModel.findOne({ userEmail });
     if (!user) {
@@ -37,7 +36,6 @@ export class AuthService {
       user.refreshToken = profile.refreshToken;
     }
     await user.save();
-    console.log('로그인한 유저 : ', user);
     return user;
   }
 

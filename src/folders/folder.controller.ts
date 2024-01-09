@@ -12,6 +12,7 @@ import {
 import { FolderService } from './folder.service';
 import { UpdateIssueFileDto } from 'src/dto/updateIssueFile.dto';
 import { UpdateFolderDto } from 'src/dto/updateFolder.dto';
+import { UpdateImageDto } from 'src/dto/updateImage.dto';
 import { UserService } from 'src/users/user.service';
 import { Types } from 'mongoose';
 
@@ -139,4 +140,10 @@ export class FoldersController {
       return res.status(404).json({ message: 'fail' });
     }
   }
+
+  @Delete('api/editedImgUrl')
+  async deleteEditedImage(
+    @Res() res: any,
+    @Body() updateImageDto: UpdateImageDto,
+  ) {}
 }

@@ -54,7 +54,6 @@ export class VideoService {
   async getFolderIdByUser(userId: string) {
     try {
       const user = await this.userModel.findById(userId);
-      console.log('user : ', user);
       const now = new Date();
 
       // KST 시간으로 변환합니다. (UTC+9)

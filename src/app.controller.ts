@@ -6,7 +6,7 @@ import { ApiService } from './api/api.service';
 export class AppController {
   constructor(
     private readonly appService: AppService,
-    private readonly urlMappingService: ApiService,
+    private readonly apiService: ApiService,
   ) {}
 
   @Get()
@@ -14,9 +14,9 @@ export class AppController {
     return 'Local Server';
   }
 
-  @Get(':hashedUrl')
+  @Get('/d/:hashedUrl')
   async getOriginalUrl(@Param('hashedUrl') hashedUrl: string, @Res() res) {
-    const mapping = await this.urlMappingService.getOriginalUrl(hashedUrl);
+    const mapping = await this.apiService.getOriginalUrl(hashedUrl);
     if (mapping) {
       // 원본 URL로 리디렉션
       res.redirect(HttpStatus.MOVED_PERMANENTLY, mapping.originUrl);

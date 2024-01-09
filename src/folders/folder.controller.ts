@@ -24,13 +24,12 @@ export class FoldersController {
   ) {}
 
   @Get()
-  async getAllFolders(@Req() req, @Res() res) {
+  async getAllFolders(@Req() req: any, @Res() res: any) {
     try {
       const userId = req.user._id;
       if (!userId) {
         return res.status(404).json({ message: 'fail' });
       }
-
       const folders = await this.userService.getAllUserFolders(userId);
 
       return res.json(folders);

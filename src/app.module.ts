@@ -28,6 +28,7 @@ import { Video, VideoSchema } from './models/videos.model';
 import { ApiService } from './api/api.service';
 import { mappedUrl } from './models/mappedUrl.model';
 import { MappedUrlSchema } from './models/mappedUrl.model';
+import { ApiModule } from './api/api.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { MappedUrlSchema } from './models/mappedUrl.model';
     AuthModule,
     PreSingedModule,
     FolderModule,
+    ApiModule,
   ],
   controllers: [
     AppController,
